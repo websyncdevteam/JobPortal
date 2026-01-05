@@ -9,8 +9,16 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  preview: {
+    host: "0.0.0.0",
+    port: 5173,
+    allowedHosts: [
+      "aim9hire.com",
+      "www.aim9hire.com"
+    ]
+  },
   server: {
-    port: 'aim9hire.com',
+    port: 5173,
     open: true,
   },
   build: {
