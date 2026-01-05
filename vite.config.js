@@ -10,7 +10,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: 'aim9hire.com',
     open: true,
   },
   build: {
