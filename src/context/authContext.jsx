@@ -18,6 +18,39 @@ export const AuthProvider = ({ children }) => {
   const dispatch = useDispatch();
   const { user, loading, token, isAuthenticated } = useSelector((store) => store.auth);
 
+  // Function to fetch user from API
+  const fetchUserFromAPI = async (token) => {
+    try {
+      console.log("🔍 Fetching user from API...");
+      const response = await api.get("/auth/me", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data?.user || response.data?.data?.user) {
+        const userData = response.data.user || response.data.data.user;
+        console.log("✅ User fetched from API:", userData.email);
+        
+        // Save to localStorage
+        localStorage.setItem("user", JSON.stringify(userData));
+        
+        // Update Redux
+        dispatch(setCredentials({
+          user: userData,
+          token: token
+        }));
+        
+        return userData;
+      }
+    } catch (error) {
+      console.error("❌ Failed to fetch user:", error);
+      // Clear invalid token
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+    }
+    return null;
+  };
+
   // Initialize auth from localStorage on mount
   useEffect(() => {
     const initializeAuth = () => {
@@ -25,18 +58,21 @@ export const AuthProvider = ({ children }) => {
       
       // ✅ FIXED: Check BOTH token storage locations
       const storedToken = localStorage.getItem("authToken") || localStorage.getItem("token");
-      const storedUser = localStorage.getItem("user");
       
       console.log("📦 Storage check:", {
         hasAuthToken: !!localStorage.getItem("authToken"),
         hasToken: !!localStorage.getItem("token"),
-        hasUser: !!storedUser
+        hasUser: !!localStorage.getItem("user")
       });
       
-      if (storedToken && storedUser) {
+      // ✅ FIX: If we have a token but no user, fetch user from API
+      if (storedToken && !localStorage.getItem("user")) {
+        console.log("🔄 Token found but no user - fetching from API");
+        fetchUserFromAPI(storedToken);
+      } else if (storedToken && localStorage.getItem("user")) {
         try {
-          const userData = JSON.parse(storedUser);
-          console.log("✅ Initializing auth with user:", userData.email, "Role:", userData.role);
+          const userData = JSON.parse(localStorage.getItem("user"));
+          console.log("✅ Initializing auth with stored user:", userData.email, "Role:", userData.role);
           
           dispatch(setCredentials({
             user: userData,
@@ -45,6 +81,8 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
           console.error("❌ Error parsing stored user:", error);
           localStorage.removeItem("user");
+          // Try to fetch from API
+          fetchUserFromAPI(storedToken);
         }
       } else {
         console.log("⚠️ No stored credentials found");
@@ -67,12 +105,14 @@ export const AuthProvider = ({ children }) => {
         // ✅ FIXED: Get data from correct response structure
         const userData = response.data.user || response.data.data?.user || response.data.data;
         const token = response.data.token || response.data.data?.token;
+        const refreshToken = response.data.refreshToken || response.data.data?.refreshToken;
         
         console.log("👤 User data extracted:", {
           hasUserData: !!userData,
           email: userData?.email,
           role: userData?.role,
-          hasToken: !!token
+          hasToken: !!token,
+          hasRefreshToken: !!refreshToken
         });
         
         if (userData && token) {
@@ -84,16 +124,24 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem("token", token); // Backup for compatibility
           localStorage.setItem("user", JSON.stringify(userData));
           
+          // ✅ SAVE REFRESH TOKEN
+          if (refreshToken) {
+            localStorage.setItem("refreshToken", refreshToken);
+            console.log('💾 Refresh token saved');
+          }
+          
           console.log("💾 Saved to localStorage:", {
             authTokenSaved: !!localStorage.getItem("authToken"),
             tokenSaved: !!localStorage.getItem("token"),
-            userSaved: !!localStorage.getItem("user")
+            userSaved: !!localStorage.getItem("user"),
+            refreshTokenSaved: !!localStorage.getItem("refreshToken")
           });
           
           return { 
             success: true, 
             user: userData,
-            token: token
+            token: token,
+            refreshToken: refreshToken
           };
         } else {
           console.error("❌ Missing data in response:", response.data);
@@ -129,6 +177,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem("authToken");
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+      localStorage.removeItem("refreshToken");
       sessionStorage.clear();
       
       dispatch(logoutUser());
@@ -155,8 +204,8 @@ export const AuthProvider = ({ children }) => {
     refreshUser: async () => {
       try {
         const response = await api.get("/auth/me");
-        if (response.data?.user) {
-          const userData = response.data.user;
+        if (response.data?.user || response.data?.data?.user) {
+          const userData = response.data.user || response.data.data.user;
           dispatch(setCredentials({ user: userData, token }));
           localStorage.setItem("user", JSON.stringify(userData));
           return { success: true, user: userData };
@@ -165,6 +214,10 @@ export const AuthProvider = ({ children }) => {
         console.error("Refresh user error:", error);
       }
       return { success: false };
+    },
+    // ✅ ADDED: Force refresh user data
+    forceRefreshUser: async () => {
+      return await fetchUserFromAPI(token);
     }
   }), [user, token, loading, dispatch]);
 

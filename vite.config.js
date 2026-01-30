@@ -17,4 +17,12 @@ export default defineConfig({
     sourcemap: true,
     outDir: 'dist',
   },
+  preview: {
+    host: "0.0.0.0",
+    port: 5173,
+    allowedHosts: [
+      "aim9hire.com",
+      "www.aim9hire.com"
+    ]
+  },
 });

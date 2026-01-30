@@ -1,16 +1,21 @@
-// src/services/api.js - FIXED VERSION
+// src/services/api.js - COMPLETE FIXED VERSION WITH TOKEN REFRESH
 import axios from 'axios';
 import { toast } from 'sonner';
 
 // Create axios instance with advanced configuration
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1',
+   baseURL: import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com/api/v1',
   timeout: 30000,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   }
 });
+
+// Generate unique request ID
+function generateRequestId() {
+  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
 
 // ✅ FIXED: Enhanced request interceptor with proper token handling
 api.interceptors.request.use(
@@ -40,7 +45,7 @@ api.interceptors.request.use(
   }
 );
 
-// ✅ FIXED: Enhanced response interceptor with better error handling
+// ✅ FIXED: Enhanced response interceptor with TOKEN REFRESH
 api.interceptors.response.use(
   (response) => {
     console.log(`✅ API Success: ${response.status} ${response.config.url}`);
@@ -50,6 +55,12 @@ api.interceptors.response.use(
       localStorage.setItem('authToken', response.data.token);
       localStorage.setItem('token', response.data.token); // For compatibility
       console.log('🔄 Token updated from response');
+    }
+    
+    // ✅ Also check for refresh token in response
+    if (response.data?.refreshToken) {
+      localStorage.setItem('refreshToken', response.data.refreshToken);
+      console.log('🔄 Refresh token updated from response');
     }
     
     return response;
@@ -64,13 +75,68 @@ api.interceptors.response.use(
       data: response?.data
     });
 
-    // Handle 401 Unauthorized - token expired or invalid
-    if (response?.status === 401) {
-      console.log('🔐 401 Unauthorized - Clearing tokens');
+    // ✅ FIXED: Handle 401 Unauthorized - TRY TO REFRESH TOKEN FIRST
+    if (response?.status === 401 && !config._retry) {
+      config._retry = true;
       
-      // Clear both tokens
+      try {
+        console.log('🔄 Attempting token refresh...');
+        
+        // Get refresh token from localStorage
+        const refreshToken = localStorage.getItem('refreshToken');
+        
+        if (refreshToken) {
+          console.log('🔄 Refresh token found, calling refresh endpoint');
+          
+          // Call refresh token endpoint directly without interceptors
+          const refreshResponse = await axios.post('http://localhost:3000/api/v1/auth/refresh', {
+            refresh_token: refreshToken
+          }, {
+            timeout: 10000,
+          });
+          
+          console.log('🔄 Refresh response:', refreshResponse.data);
+          
+          if (refreshResponse.data.success || refreshResponse.data.token) {
+            const newAccessToken = refreshResponse.data.token || 
+                                   refreshResponse.data.data?.access_token ||
+                                   refreshResponse.data.access_token;
+            const newRefreshToken = refreshResponse.data.refreshToken || 
+                                    refreshResponse.data.data?.refresh_token;
+            
+            // Update tokens in storage
+            localStorage.setItem('authToken', newAccessToken);
+            localStorage.setItem('token', newAccessToken);
+            if (newRefreshToken) {
+              localStorage.setItem('refreshToken', newRefreshToken);
+              console.log('✅ New refresh token saved');
+            }
+            
+            console.log('✅ Token refreshed successfully:', newAccessToken.substring(0, 20) + '...');
+            
+            // Update the original request with new token
+            config.headers.Authorization = `Bearer ${newAccessToken}`;
+            
+            // Retry the original request
+            return api(config);
+          }
+        } else {
+          console.log('⚠️ No refresh token found in localStorage');
+        }
+      } catch (refreshError) {
+        console.error('❌ Token refresh failed:', refreshError.message);
+        console.log('❌ Refresh error details:', refreshError.response?.data);
+        // Continue to logout flow below
+      }
+      
+      // If refresh fails or no refresh token, logout
+      console.log('🔐 Token refresh failed - Clearing tokens');
+      
+      // Clear all tokens
       localStorage.removeItem('authToken');
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
       
       // Show user-friendly message
       toast.error('Your session has expired. Please login again.');
@@ -81,9 +147,11 @@ api.interceptors.response.use(
           window.location.href = '/login';
         }, 1500);
       }
+      
+      return Promise.reject(error);
     }
     
-    // Handle 403 Forbidden (ADMIN ACCESS ISSUE)
+    // Handle 403 Forbidden
     if (response?.status === 403) {
       const message = response.data?.message || 'Access denied';
       const userRole = response.data?.userRole || 'unknown';
@@ -125,12 +193,7 @@ api.interceptors.response.use(
   }
 );
 
-// Generate unique request ID
-function generateRequestId() {
-  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
-
-// ✅ FIXED: Enhanced API methods with token validation
+// ✅ Enhanced API methods with token validation
 export const advancedApi = {
   get: async (url, config = {}) => {
     // Validate token before request
@@ -194,17 +257,46 @@ export const advancedApi = {
     });
   },
   
-  // ✅ NEW: Check token validity
+  // ✅ Check token validity
   validateToken: async () => {
     const token = localStorage.getItem('authToken') || localStorage.getItem('token');
     if (!token) return false;
     
     try {
-      const response = await api.get('/auth/verify');
+      const response = await api.get('/auth/me');
       return response.data.success || false;
     } catch (error) {
       console.error('Token validation failed:', error);
       return false;
+    }
+  },
+  
+  // ✅ NEW: Manual token refresh (can be called before sensitive operations)
+  manualRefresh: async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+    
+    try {
+      const response = await api.post('/auth/refresh', { refresh_token: refreshToken });
+      
+      if (response.data.success || response.data.token) {
+        const newAccessToken = response.data.token || response.data.access_token;
+        const newRefreshToken = response.data.refreshToken || response.data.refresh_token;
+        
+        localStorage.setItem('authToken', newAccessToken);
+        localStorage.setItem('token', newAccessToken);
+        if (newRefreshToken) {
+          localStorage.setItem('refreshToken', newRefreshToken);
+        }
+        
+        console.log('✅ Manual token refresh successful');
+        return { success: true, accessToken: newAccessToken };
+      }
+    } catch (error) {
+      console.error('Manual token refresh failed:', error);
+      throw error;
     }
   }
 };
