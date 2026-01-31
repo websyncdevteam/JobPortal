@@ -1,10 +1,10 @@
-// src/services/api.js - COMPLETE FIXED VERSION WITH TOKEN REFRESH
+// src/services/api.js - COMPLETE FIXED VERSION
 import axios from 'axios';
 import { toast } from 'sonner';
 
 // Create axios instance with advanced configuration
 const api = axios.create({
-   baseURL: import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com',
+  baseURL: import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com/api/v1', // ✅ FIXED: Added /api/v1
   timeout: 30000,
   withCredentials: true,
   headers: {
@@ -88,8 +88,8 @@ api.interceptors.response.use(
         if (refreshToken) {
           console.log('🔄 Refresh token found, calling refresh endpoint');
           
-          // Call refresh token endpoint directly without interceptors
-          const refreshResponse = await axios.post('http://localhost:3000/api/v1/auth/refresh', {
+          // ✅ FIXED: Use api instance NOT axios with hardcoded URL
+          const refreshResponse = await api.post('/auth/refresh', {
             refresh_token: refreshToken
           }, {
             timeout: 10000,
