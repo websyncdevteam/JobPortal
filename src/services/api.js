@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 // Create axios instance with advanced configuration
 const api = axios.create({
-   baseURL: import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com/api/v1',
+   baseURL: import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com',
   timeout: 30000,
   withCredentials: true,
   headers: {
