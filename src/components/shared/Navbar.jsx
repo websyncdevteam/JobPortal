@@ -1,23 +1,21 @@
+// src/components/Navbar.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Menu,
   X,
-  User,
-  LogOut,
-  Settings,
-  Home,
-  LayoutDashboard,
   User2,
+  LogOut,
+  LayoutDashboard,
   Briefcase,
   Heart,
+  Home,
   Search,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "@/redux/authSlice";
-import axios from "axios";
-import { USER_API_END_POINT } from "@/utils/constant";
+import api from "@/services/api"; // ✅ Use central API
 import { toast } from "sonner";
 import Logo from "../../assets/3.png";
 
@@ -31,22 +29,20 @@ const Navbar = () => {
   const location = useLocation();
   const dropdownRef = useRef(null);
 
-  // Handle scroll effect
+  // Scroll effect
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close mobile menu on route change
+  // Close menus on route change
   useEffect(() => {
     setMobileMenuOpen(false);
     setUserDropdownOpen(false);
   }, [location]);
 
-  // Close dropdown when clicking outside
+  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -57,11 +53,10 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Logout function using central api
   const logoutHandler = async () => {
     try {
-      const res = await axios.get(`${USER_API_END_POINT}/logout`, {
-        withCredentials: true,
-      });
+      const res = await api.get("/user/logout"); // relative to baseURL
       if (res.data.success) {
         dispatch(setUser(null));
         navigate("/login");
@@ -88,7 +83,6 @@ const Navbar = () => {
     setUserDropdownOpen(false);
   };
 
-  // Get user initials for avatar fallback
   const getUserInitials = () => {
     if (!user?.fullname) return "U";
     return user.fullname
@@ -99,33 +93,19 @@ const Navbar = () => {
       .slice(0, 2);
   };
 
-  // Get user's first name for greeting
   const getUserFirstName = () => {
     if (!user?.fullname) return "User";
     return user.fullname.split(" ")[0];
   };
 
-  // Get profile picture URL - handles both profile.profilePhoto and uploaded profile picture
   const getProfilePicture = () => {
     if (!user) return null;
-
-    // Check if user has a profile photo in profile object
-    if (user.profile?.profilePhoto) {
-      return user.profile.profilePhoto;
-    }
-
-    // Check if user has uploadedProfilePicture field
-    if (user.uploadedProfilePicture) {
-      return user.uploadedProfilePicture;
-    }
-
-    // Check if user has profilePicture field
-    if (user.profilePicture) {
-      return user.profilePicture;
-    }
-
-    // Return null to use fallback with initials
-    return null;
+    return (
+      user.profile?.profilePhoto ||
+      user.uploadedProfilePicture ||
+      user.profilePicture ||
+      null
+    );
   };
 
   return (
@@ -138,7 +118,7 @@ const Navbar = () => {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo Only - Fixed size to fit navbar */}
+          {/* Logo */}
           <div className="flex items-center">
             <Link
               to="/"
@@ -160,47 +140,39 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Desktop Navigation Links - All the links you requested */}
+          {/* Desktop Nav Links */}
           <div className="hidden lg:flex items-center space-x-8">
             <Link
               to="/"
               className={`font-medium transition-colors hover:text-purple-600 flex items-center gap-2 ${
-                location.pathname === "/"
-                  ? "text-purple-600 font-semibold"
-                  : "text-gray-700"
+                location.pathname === "/" ? "text-purple-600 font-semibold" : "text-gray-700"
               }`}
             >
               <Home size={18} />
-              <span>Home</span>
+              Home
             </Link>
             <Link
               to="/jobs"
               className={`font-medium transition-colors hover:text-purple-600 flex items-center gap-2 ${
-                location.pathname === "/jobs"
-                  ? "text-purple-600 font-semibold"
-                  : "text-gray-700"
+                location.pathname === "/jobs" ? "text-purple-600 font-semibold" : "text-gray-700"
               }`}
             >
               <Briefcase size={18} />
-              <span>Jobs</span>
+              Jobs
             </Link>
             <Link
               to="/saved-jobs"
               className={`font-medium transition-colors hover:text-purple-600 flex items-center gap-2 ${
-                location.pathname === "/saved-jobs"
-                  ? "text-purple-600 font-semibold"
-                  : "text-gray-700"
+                location.pathname === "/saved-jobs" ? "text-purple-600 font-semibold" : "text-gray-700"
               }`}
             >
               <Heart size={18} />
-              <span>Saved Jobs</span>
+              Saved Jobs
             </Link>
             <Link
               to="/about-us"
               className={`font-medium transition-colors hover:text-purple-600 ${
-                location.pathname === "/about-us"
-                  ? "text-purple-600 font-semibold"
-                  : "text-gray-700"
+                location.pathname === "/about-us" ? "text-purple-600 font-semibold" : "text-gray-700"
               }`}
             >
               About Us
@@ -208,9 +180,7 @@ const Navbar = () => {
             <Link
               to="/privacy-policy"
               className={`font-medium transition-colors hover:text-purple-600 ${
-                location.pathname === "/privacy-policy"
-                  ? "text-purple-600 font-semibold"
-                  : "text-gray-700"
+                location.pathname === "/privacy-policy" ? "text-purple-600 font-semibold" : "text-gray-700"
               }`}
             >
               Privacy Policy
@@ -247,9 +217,7 @@ const Navbar = () => {
                   className="flex items-center space-x-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 rounded-lg p-2 hover:bg-purple-50 transition-colors"
                 >
                   <div className="text-right hidden md:block">
-                    <p className="font-semibold text-gray-900 text-sm">
-                      {getUserFirstName()}
-                    </p>
+                    <p className="font-semibold text-gray-900 text-sm">{getUserFirstName()}</p>
                     <p className="text-xs text-gray-500">Profile</p>
                   </div>
                   <Avatar className="w-10 h-10 border-2 border-purple-100">
@@ -267,10 +235,9 @@ const Navbar = () => {
                   </Avatar>
                 </button>
 
-                {/* Custom Dropdown Menu */}
+                {/* Dropdown */}
                 {userDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 animate-in fade-in slide-in-from-top-5">
-                    {/* User Info Section */}
                     <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
                       <Avatar className="w-12 h-12 border-2 border-purple-100">
                         <AvatarImage
@@ -286,19 +253,13 @@ const Navbar = () => {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-gray-900 truncate">
-                          {user?.fullname}
-                        </h4>
-                        <p className="text-sm text-gray-500 truncate">
-                          {user?.email}
-                        </p>
-                        <p className="text-xs text-purple-600 font-medium capitalize mt-1">
-                          {user?.role}
-                        </p>
+                        <h4 className="font-bold text-gray-900 truncate">{user?.fullname}</h4>
+                        <p className="text-sm text-gray-500 truncate">{user?.email}</p>
+                        <p className="text-xs text-purple-600 font-medium capitalize mt-1">{user?.role}</p>
                       </div>
                     </div>
 
-                    {/* Dashboard/Profile based on role */}
+                    {/* Role-based links */}
                     <div className="flex flex-col gap-1 py-2">
                       {user?.role === "Freelancer" && (
                         <>
@@ -307,36 +268,35 @@ const Navbar = () => {
                             className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
                           >
                             <LayoutDashboard size={18} />
-                            <span>Dashboard</span>
+                            Dashboard
                           </button>
                           <button
                             onClick={goToProfile}
                             className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
                           >
                             <User2 size={18} />
-                            <span>Profile</span>
+                            Profile
                           </button>
                         </>
                       )}
-
                       {user?.role === "candidate" && (
                         <button
                           onClick={goToCandidateProfile}
                           className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
                         >
                           <User2 size={18} />
-                          <span>View Profile</span>
+                          View Profile
                         </button>
                       )}
 
-                      {/* Logout Button */}
+                      {/* Logout */}
                       <div className="border-t border-gray-100 my-1"></div>
                       <button
                         onClick={logoutHandler}
                         className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <LogOut size={18} />
-                        <span>Logout</span>
+                        Logout
                       </button>
                     </div>
                   </div>
@@ -345,7 +305,7 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile menu button - Only hamburger menu */}
+          {/* Mobile menu button */}
           <div className="lg:hidden flex items-center space-x-4">
             {user ? (
               <Avatar className="w-9 h-9 border-2 border-purple-100">
@@ -362,14 +322,12 @@ const Navbar = () => {
                 </AvatarFallback>
               </Avatar>
             ) : (
-              <div className="flex items-center space-x-2">
-                <Link
-                  to="/login"
-                  className="px-3 py-1.5 text-sm border border-purple-600 text-purple-600 rounded-lg font-medium hover:bg-purple-50 transition-colors"
-                >
-                  Login
-                </Link>
-              </div>
+              <Link
+                to="/login"
+                className="px-3 py-1.5 text-sm border border-purple-600 text-purple-600 rounded-lg font-medium hover:bg-purple-50 transition-colors"
+              >
+                Login
+              </Link>
             )}
 
             <button
@@ -377,11 +335,7 @@ const Navbar = () => {
               className="p-2 rounded-md text-gray-700 hover:text-purple-600 hover:bg-purple-50 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500"
               aria-label="Toggle menu"
             >
-              {mobileMenuOpen ? (
-                <X size={24} className="animate-in fade-in" />
-              ) : (
-                <Menu size={24} className="animate-in fade-in" />
-              )}
+              {mobileMenuOpen ? <X size={24} className="animate-in fade-in" /> : <Menu size={24} className="animate-in fade-in" />}
             </button>
           </div>
         </div>
@@ -396,7 +350,7 @@ const Navbar = () => {
         }`}
       >
         <div className="px-4 py-6 space-y-4">
-          {/* Display user info at top if logged in */}
+          {/* User info */}
           {user && (
             <div className="flex items-center space-x-3 px-4 py-3 bg-purple-50 rounded-lg mb-4">
               <Avatar className="w-14 h-14 border-2 border-white">
@@ -413,166 +367,42 @@ const Navbar = () => {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-gray-900 truncate">
-                  {user?.fullname}
-                </p>
+                <p className="font-bold text-gray-900 truncate">{user?.fullname}</p>
                 <p className="text-sm text-gray-600 truncate">{user?.email}</p>
-                <p className="text-xs text-purple-600 font-medium capitalize">
-                  {user?.role}
-                </p>
+                <p className="text-xs text-purple-600 font-medium capitalize">{user?.role}</p>
               </div>
             </div>
           )}
 
+          {/* Links */}
           <div className="flex flex-col space-y-3">
-            <Link
-              to="/"
-              className={`px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${
-                location.pathname === "/"
-                  ? "bg-purple-50 text-purple-600"
-                  : "hover:bg-gray-50 text-gray-700"
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Home size={18} />
-              <span>Home</span>
-            </Link>
-            <Link
-              to="/jobs"
-              className={`px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${
-                location.pathname === "/jobs"
-                  ? "bg-purple-50 text-purple-600"
-                  : "hover:bg-gray-50 text-gray-700"
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Briefcase size={18} />
-              <span>Jobs</span>
-            </Link>
-            <Link
-              to="/browse"
-              className={`px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${
-                location.pathname === "/browse"
-                  ? "bg-purple-50 text-purple-600"
-                  : "hover:bg-gray-50 text-gray-700"
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Search size={18} />
-              <span>Browse</span>
-            </Link>
-            <Link
-              to="/saved-jobs"
-              className={`px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${
-                location.pathname === "/saved-jobs"
-                  ? "bg-purple-50 text-purple-600"
-                  : "hover:bg-gray-50 text-gray-700"
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Heart size={18} />
-              <span>Saved Jobs</span>
-            </Link>
-            <Link
-              to="/about-us"
-              className={`px-4 py-3 rounded-lg font-medium transition-colors ${
-                location.pathname === "/about-us"
-                  ? "bg-purple-50 text-purple-600"
-                  : "hover:bg-gray-50 text-gray-700"
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              About Us
-            </Link>
-            <Link
-              to="/privacy-policy"
-              className={`px-4 py-3 rounded-lg font-medium transition-colors ${
-                location.pathname === "/privacy-policy"
-                  ? "bg-purple-50 text-purple-600"
-                  : "hover:bg-gray-50 text-gray-700"
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Privacy Policy
-            </Link>
-            <Link
-              to="/join-freelancer"
-              className="px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg font-semibold text-center hover:from-purple-700 hover:to-purple-900 transition-all"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Join as Freelancer
-            </Link>
+            <Link to="/" onClick={() => setMobileMenuOpen(false)} className={`px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${location.pathname === "/" ? "bg-purple-50 text-purple-600" : "hover:bg-gray-50 text-gray-700"}`}><Home size={18}/>Home</Link>
+            <Link to="/jobs" onClick={() => setMobileMenuOpen(false)} className={`px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${location.pathname === "/jobs" ? "bg-purple-50 text-purple-600" : "hover:bg-gray-50 text-gray-700"}`}><Briefcase size={18}/>Jobs</Link>
+            <Link to="/browse" onClick={() => setMobileMenuOpen(false)} className={`px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${location.pathname === "/browse" ? "bg-purple-50 text-purple-600" : "hover:bg-gray-50 text-gray-700"}`}><Search size={18}/>Browse</Link>
+            <Link to="/saved-jobs" onClick={() => setMobileMenuOpen(false)} className={`px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-3 ${location.pathname === "/saved-jobs" ? "bg-purple-50 text-purple-600" : "hover:bg-gray-50 text-gray-700"}`}><Heart size={18}/>Saved Jobs</Link>
+            <Link to="/about-us" onClick={() => setMobileMenuOpen(false)} className={`px-4 py-3 rounded-lg font-medium transition-colors ${location.pathname === "/about-us" ? "bg-purple-50 text-purple-600" : "hover:bg-gray-50 text-gray-700"}`}>About Us</Link>
+            <Link to="/privacy-policy" onClick={() => setMobileMenuOpen(false)} className={`px-4 py-3 rounded-lg font-medium transition-colors ${location.pathname === "/privacy-policy" ? "bg-purple-50 text-purple-600" : "hover:bg-gray-50 text-gray-700"}`}>Privacy Policy</Link>
+            <Link to="/join-freelancer" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg font-semibold text-center hover:from-purple-700 hover:to-purple-900 transition-all">Join as Freelancer</Link>
           </div>
 
-          {/* Auth buttons for mobile - Only show login/signup if NOT logged in */}
+          {/* Auth buttons for mobile */}
           {!user ? (
             <div className="pt-4 space-y-3 border-t border-gray-100">
-              <Link
-                to="/login"
-                className="block px-4 py-3 text-center border border-purple-600 text-purple-600 rounded-lg font-medium hover:bg-purple-50 transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Login
-              </Link>
-              <Link
-                to="/signup"
-                className="block px-4 py-3 text-center bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-purple-900 transition-all"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Sign Up
-              </Link>
+              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 text-center border border-purple-600 text-purple-600 rounded-lg font-medium hover:bg-purple-50 transition-colors">Login</Link>
+              <Link to="/signup" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 text-center bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-purple-900 transition-all">Sign Up</Link>
             </div>
           ) : (
             <div className="pt-4 space-y-3 border-t border-gray-100">
-              {/* Role-based links */}
               {user?.role === "Freelancer" && (
                 <>
-                  <button
-                    onClick={() => {
-                      goToDashboard();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="flex items-center gap-3 w-full px-4 py-3 rounded-lg font-medium hover:bg-gray-50 text-gray-700"
-                  >
-                    <LayoutDashboard size={18} />
-                    Dashboard
-                  </button>
-                  <button
-                    onClick={() => {
-                      goToProfile();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="flex items-center gap-3 w-full px-4 py-3 rounded-lg font-medium hover:bg-gray-50 text-gray-700"
-                  >
-                    <User2 size={18} />
-                    Profile
-                  </button>
+                  <button onClick={() => {goToDashboard(); setMobileMenuOpen(false)}} className="flex items-center gap-3 w-full px-4 py-3 rounded-lg font-medium hover:bg-gray-50 text-gray-700"><LayoutDashboard size={18}/>Dashboard</button>
+                  <button onClick={() => {goToProfile(); setMobileMenuOpen(false)}} className="flex items-center gap-3 w-full px-4 py-3 rounded-lg font-medium hover:bg-gray-50 text-gray-700"><User2 size={18}/>Profile</button>
                 </>
               )}
-
               {user?.role === "candidate" && (
-                <button
-                  onClick={() => {
-                    goToCandidateProfile();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-lg font-medium hover:bg-gray-50 text-gray-700"
-                >
-                  <User2 size={18} />
-                  View Profile
-                </button>
+                <button onClick={() => {goToCandidateProfile(); setMobileMenuOpen(false)}} className="flex items-center gap-3 w-full px-4 py-3 rounded-lg font-medium hover:bg-gray-50 text-gray-700"><User2 size={18}/>View Profile</button>
               )}
-
-              <button
-                onClick={() => {
-                  logoutHandler();
-                  setMobileMenuOpen(false);
-                }}
-                className="flex items-center gap-3 w-full px-4 py-3 text-red-600 font-medium hover:bg-red-50 rounded-lg transition-colors"
-              >
-                <LogOut size={18} />
-                Logout
-              </button>
+              <button onClick={() => {logoutHandler(); setMobileMenuOpen(false)}} className="flex items-center gap-3 w-full px-4 py-3 text-red-600 font-medium hover:bg-red-50 rounded-lg transition-colors"><LogOut size={18}/>Logout</button>
             </div>
           )}
         </div>
