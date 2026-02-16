@@ -1,184 +1,131 @@
-import { advancedApi as api } from '../api';
+// src/services/freelancer/freelancerService.js
+import api from '../api';
 
 class FreelancerService {
-  
   // 🔹 Profile Management
-  async onboard(onboardingData) {
-    try {
-      const response = await api.post('/freelancer/onboard', onboardingData);
-      return this.handleResponse(response);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to complete onboarding');
-    }
+  async onboard(data) {
+    return this._post('/freelancer/onboard', data, 'Failed to complete onboarding');
   }
 
   async getProfile() {
-    try {
-      const response = await api.get('/freelancer/profile');
-      return this.handleResponse(response);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch profile');
-    }
+    return this._get('/freelancer/profile', 'Failed to fetch profile');
   }
 
-  async updateProfile(profileData) {
-    try {
-      const response = await api.put('/freelancer/profile', profileData);
-      return this.handleResponse(response);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to update profile');
-    }
+  async updateProfile(data) {
+    return this._put('/freelancer/profile', data, 'Failed to update profile');
   }
 
-  // 🔹 Dashboard Data
+  // 🔹 Dashboard
   async getDashboard() {
-    try {
-      const response = await api.get('/freelancer/dashboard');
-      return this.handleResponse(response);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to load dashboard');
-    }
+    return this._get('/freelancer/dashboard', 'Failed to load dashboard');
   }
 
   // 🔹 Placement Management
   async getPlacements(filters = {}) {
-    try {
-      const response = await api.get('/placement/freelancer/placements', { 
-        params: this.sanitizeParams(filters) 
-      });
-      return this.handleResponse(response);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch placements');
-    }
+    return this._get('/placement/freelancer/placements', 'Failed to fetch placements', filters);
   }
 
-  async getPlacement(placementId) {
-    try {
-      const response = await api.get(`/placement/freelancer/placements/${placementId}`);
-      return this.handleResponse(response);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch placement details');
-    }
+  async getPlacement(id) {
+    return this._get(`/placement/freelancer/placements/${id}`, 'Failed to fetch placement details');
   }
 
-  async submitCandidate(candidateData) {
-    try {
-      const response = await api.post('/placement/submit-candidate', candidateData);
-      return this.handleResponse(response);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to submit candidate');
-    }
+  async submitCandidate(data) {
+    return this._post('/placement/submit-candidate', data, 'Failed to submit candidate');
   }
 
-  async withdrawPlacement(placementId, reason) {
-    try {
-      const response = await api.patch(`/placement/freelancer/placements/${placementId}/withdraw`, { reason });
-      return this.handleResponse(response);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to withdraw placement');
-    }
+  async withdrawPlacement(id, reason) {
+    return this._patch(`/placement/freelancer/placements/${id}/withdraw`, { reason }, 'Failed to withdraw placement');
   }
 
   // 🔹 Job Management
   async getAvailableJobs(filters = {}) {
-    try {
-      const response = await api.get('/placement/freelancer/available-jobs', {
-        params: this.sanitizeParams(filters)
-      });
-      return this.handleResponse(response);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch available jobs');
-    }
+    return this._get('/placement/freelancer/available-jobs', 'Failed to fetch available jobs', filters);
   }
 
   // 🔹 Earnings & Payouts
   async getEarnings(timeframe = 'all') {
-    try {
-      const response = await api.get('/freelancer/earnings', { 
-        params: { timeframe } 
-      });
-      return this.handleResponse(response);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch earnings');
-    }
+    return this._get('/freelancer/earnings', 'Failed to fetch earnings', { timeframe });
   }
 
   async getPayouts(filters = {}) {
-    try {
-      const response = await api.get('/payout/freelancer/my-payouts', {
-        params: this.sanitizeParams(filters)
-      });
-      return this.handleResponse(response);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch payouts');
-    }
+    return this._get('/payout/freelancer/my-payouts', 'Failed to fetch payouts', filters);
   }
 
-  async requestPayout(payoutData) {
-    try {
-      const response = await api.post('/payout/request', payoutData);
-      return this.handleResponse(response);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to request payout');
-    }
+  async requestPayout(data) {
+    return this._post('/payout/request', data, 'Failed to request payout');
   }
 
-  // 🔹 Analytics & Stats
+  // 🔹 Analytics
   async getPlacementStats() {
-    try {
-      const response = await api.get('/placement/freelancer/placements/stats');
-      return this.handleResponse(response);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch placement statistics');
-    }
+    return this._get('/placement/freelancer/placements/stats', 'Failed to fetch placement statistics');
   }
 
-  // 🔹 Utility Methods
-  handleResponse(response) {
-    if (response.data.success) {
-      return response.data;
-    } else {
-      throw new Error(response.data.message || 'Request failed');
-    }
-  }
-
-  handleError(error, defaultMessage) {
-    if (error.response?.data?.message) {
-      throw new Error(error.response.data.message);
-    } else if (error.message) {
-      throw new Error(error.message);
-    } else {
-      throw new Error(defaultMessage);
-    }
-  }
-
-  sanitizeParams(params) {
-    const sanitized = { ...params };
-    
-    // Remove undefined, null, empty strings
-    Object.keys(sanitized).forEach(key => {
-      if (sanitized[key] === undefined || sanitized[key] === null || sanitized[key] === '') {
-        delete sanitized[key];
-      }
-    });
-    
-    return sanitized;
-  }
-
-  // 🔹 File Upload with Progress
+  // 🔹 File Upload
   async uploadResume(file, onProgress = null) {
     try {
       const formData = new FormData();
       formData.append('resume', file);
-      
-      const response = await api.upload('/upload/resume', formData, onProgress);
-      return this.handleResponse(response);
+
+      const response = await api.post('/upload/resume', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress) onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+        },
+      });
+      return this._handleResponse(response);
     } catch (error) {
-      throw this.handleError(error, 'Failed to upload resume');
+      throw this._handleError(error, 'Failed to upload resume');
     }
+  }
+
+  // ==============================
+  // 🔹 PRIVATE HELPERS
+  // ==============================
+  _get(url, errorMsg, params = {}) {
+    return this._request('get', url, null, errorMsg, params);
+  }
+
+  _post(url, data, errorMsg) {
+    return this._request('post', url, data, errorMsg);
+  }
+
+  _put(url, data, errorMsg) {
+    return this._request('put', url, data, errorMsg);
+  }
+
+  _patch(url, data, errorMsg) {
+    return this._request('patch', url, data, errorMsg);
+  }
+
+  async _request(method, url, data, errorMsg, params = {}) {
+    try {
+      const response = await api({ method, url, data, params: this._sanitizeParams(params) });
+      return this._handleResponse(response);
+    } catch (error) {
+      throw this._handleError(error, errorMsg);
+    }
+  }
+
+  _handleResponse(response) {
+    if (response.data.success) return response.data;
+    throw new Error(response.data.message || 'Request failed');
+  }
+
+  _handleError(error, defaultMsg) {
+    if (error.response?.data?.message) throw new Error(error.response.data.message);
+    else if (error.message) throw new Error(error.message);
+    else throw new Error(defaultMsg);
+  }
+
+  _sanitizeParams(params) {
+    const sanitized = { ...params };
+    Object.keys(sanitized).forEach(
+      (key) => (sanitized[key] === undefined || sanitized[key] === null || sanitized[key] === '') && delete sanitized[key]
+    );
+    return sanitized;
   }
 }
 
-// Create singleton instance
+// 🔹 Singleton
 const freelancerService = new FreelancerService();
 export default freelancerService;
