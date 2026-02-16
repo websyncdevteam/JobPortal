@@ -1,4 +1,4 @@
-import { advancedApi as api } from '../api';
+import api from "../api";
 
 
 class PlacementService {
