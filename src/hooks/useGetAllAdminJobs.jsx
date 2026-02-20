@@ -3,7 +3,7 @@ import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setAllAdminJobs } from "@/redux/jobSlice";
 
-const API_BASE_URL = "http://localhost:3000/api/v1";
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com/api/v1';
 
 const useGetAllAdminJobs = () => {
   const dispatch = useDispatch();
@@ -38,7 +38,7 @@ const useGetAllAdminJobs = () => {
     fetchAllAdminJobs();
   }, [fetchAllAdminJobs]);
 
-  // ✅ Return refetch so AdminJobs.jsx keeps working
+  // Return refetch so AdminJobs.jsx keeps working
   return { jobs: allAdminJobs, loading, error, refetch: fetchAllAdminJobs };
 };
 
