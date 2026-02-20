@@ -1,6 +1,9 @@
 import api from "../../services/api";
 import { toast } from "sonner";
 
+// API Base URL from environment or fallback to production
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com/api/v1';
+
 class WorkflowService {
   constructor() {
     this.cache = {
@@ -581,8 +584,8 @@ class WorkflowService {
     try {
       console.log("🧪 Testing analytics endpoint directly...");
       
-      // Test with fetch directly to avoid axios issues
-      const response = await fetch('http://localhost:3000/api/v1/company/workflow/analytics', {
+      // Test with fetch directly to avoid axios issues – use environment variable
+      const response = await fetch(`${API_BASE_URL}/company/workflow/analytics`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
