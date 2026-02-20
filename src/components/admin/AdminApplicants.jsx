@@ -54,7 +54,8 @@ import {
   Star as StarIcon
 } from "@mui/icons-material";
 
-const BASE_URL = "http://localhost:3000";
+// Use environment variable or production URL
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com';
 
 // Enhanced status options with icons and descriptions
 const statusOptions = [
@@ -270,27 +271,27 @@ const AdminApplicants = () => {
     return stats;
   };
 
- // FIXED: Enhanced file URL handling
-const getFileUrl = (filePath) => {
-  if (!filePath) return '';
-  if (filePath.startsWith('http')) return filePath;
-  
-  // Remove any leading slashes
-  const cleanPath = filePath.replace(/^\/+/, '');
-  
-  // If it already starts with api/uploads, just add BASE_URL
-  if (cleanPath.startsWith('api/uploads/')) {
-    return `${BASE_URL}/${cleanPath}`;
-  }
-  
-  // If it starts with uploads/, add /api/ prefix
-  if (cleanPath.startsWith('uploads/')) {
-    return `${BASE_URL}/api/${cleanPath}`;
-  }
-  
-  // Otherwise, assume it's just a filename
-  return `${BASE_URL}/api/uploads/${cleanPath}`;
-};
+  // Enhanced file URL handling
+  const getFileUrl = (filePath) => {
+    if (!filePath) return '';
+    if (filePath.startsWith('http')) return filePath;
+    
+    // Remove any leading slashes
+    const cleanPath = filePath.replace(/^\/+/, '');
+    
+    // If it already starts with api/uploads, just add BASE_URL
+    if (cleanPath.startsWith('api/uploads/')) {
+      return `${BASE_URL}/${cleanPath}`;
+    }
+    
+    // If it starts with uploads/, add /api/ prefix
+    if (cleanPath.startsWith('uploads/')) {
+      return `${BASE_URL}/api/${cleanPath}`;
+    }
+    
+    // Otherwise, assume it's just a filename
+    return `${BASE_URL}/api/uploads/${cleanPath}`;
+  };
 
   const fetchApplicants = async () => {
     try {
