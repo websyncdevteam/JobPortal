@@ -22,8 +22,10 @@ const Job = ({ job }) => {
     const handleApply = async () => {
         setApplying(true);
         try {
+            // Use environment variable for API base URL
+            const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com';
             const response = await axios.post(
-                `http://localhost:3000/api/v1/application/${job._id}/apply`,
+                `${API_BASE_URL}/api/v1/application/${job._id}/apply`,
                 {},
                 { withCredentials: true }
             );
@@ -32,7 +34,7 @@ const Job = ({ job }) => {
                 toast.success('Application submitted successfully!');
             }
         } catch (error) {
-            // ✅ Handle suspension errors
+            // Handle suspension errors
             if (error.response?.status === 400) {
                 toast.error(error.response.data.message);
             } else if (error.response?.status === 409) {
