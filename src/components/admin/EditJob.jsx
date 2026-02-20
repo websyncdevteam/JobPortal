@@ -43,8 +43,9 @@ const EditJob = () => {
       }
 
       try {
-        // Use the public endpoint
-        const res = await axios.get(`http://localhost:3000/api/v1/jobs/${jobId}`);
+        // Use environment variable for API base URL
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com';
+        const res = await axios.get(`${API_BASE_URL}/api/v1/jobs/${jobId}`);
         
         if (res.data.success && res.data.data) {
           const job = res.data.data;
