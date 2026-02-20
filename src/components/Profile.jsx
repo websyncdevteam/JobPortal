@@ -16,7 +16,7 @@ const Profile = () => {
     const { user } = useSelector(store => store.auth);
     
     // Get API URL from environment or use default
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com';
     
     // Safe profile data access
     const profile = user?.profile || {};
@@ -25,7 +25,7 @@ const Profile = () => {
     const hasResume = !!profile.resume;
     
     // ============================
-    // 🔗 FIX: URL Helper Functions
+    // 🔗 URL Helper Functions
     // ============================
     const getProfilePhotoUrl = () => {
         if (!profile.profilePhoto) {
