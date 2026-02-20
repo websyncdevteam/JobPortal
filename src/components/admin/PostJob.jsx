@@ -32,6 +32,9 @@ import {
 import { toast } from "sonner";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 
+// API Base URL from environment or fallback to production
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com';
+
 // Create a custom theme with black and orange
 const theme = createTheme({
   palette: {
@@ -150,7 +153,7 @@ const PostJob = () => {
         }
 
         const res = await axios.get(
-          "http://localhost:3000/api/v1/admin/companies",
+          `${API_BASE_URL}/api/v1/admin/companies`,
           {
             headers: { Authorization: `Bearer ${token}` },
             withCredentials: true,
@@ -226,8 +229,8 @@ const PostJob = () => {
       const token = user?.token || localStorage.getItem("authToken");
       const endpoint =
         user?.role === "admin"
-          ? "http://localhost:3000/api/v1/admin/jobs"
-          : "http://localhost:3000/api/v1/recruiter/jobs";
+          ? `${API_BASE_URL}/api/v1/admin/jobs`
+          : `${API_BASE_URL}/api/v1/recruiter/jobs`;
 
       const res = await axios.post(endpoint, payload, {
         headers: { Authorization: `Bearer ${token}` },
@@ -503,4 +506,4 @@ const PostJob = () => {
   );
 };
 
-export default PostJob;
+export default PostJob; 
