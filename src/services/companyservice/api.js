@@ -1,5 +1,5 @@
 // src/services/admin/companyApi.js
-import api from "../api"; // uses baseURL: http://localhost:3000/api/v1
+import api from "../api"; // baseURL is configured via VITE_API_URL in api.js
 
 export const companyAPI = {
   getAdminCompanies: async () => {
