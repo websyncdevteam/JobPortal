@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com/api/v1';
 
 /**
  * UserProfilePage
@@ -44,7 +44,7 @@ const UserProfilePage = ({ mode }) => {
     if (isCreateMode) return;
     setLoading(true);
     try {
-      const res = await axios.get(`${BASE_URL}/api/v1/admin/users/${id}`, {
+      const res = await axios.get(`${BASE_URL}/admin/users/${id}`, {
         withCredentials: true,
       });
 
@@ -69,12 +69,10 @@ const UserProfilePage = ({ mode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isCreateMode]);
 
-  // ---- File URL helper (as before) ----
+  // ---- File URL helper ----
   const getFileUrl = (filePath) => {
     if (!filePath) return "";
-    try {
-      if (filePath.startsWith("http")) return filePath;
-    } catch {}
+    if (filePath.startsWith("http")) return filePath;
     if (filePath.startsWith("/uploads/")) return `${BASE_URL}${filePath}`;
     if (filePath.includes("/uploads/")) {
       const filename = filePath.split("/uploads/").pop();
@@ -94,7 +92,7 @@ const UserProfilePage = ({ mode }) => {
     try {
       setUpdating(true);
       const res = await axios.post(
-        `${BASE_URL}/api/v1/admin/users`,
+        `${BASE_URL}/admin/users`,
         { ...user },
         { withCredentials: true }
       );
@@ -124,7 +122,7 @@ const UserProfilePage = ({ mode }) => {
     try {
       setUpdating(true);
       const res = await axios.put(
-        `${BASE_URL}/api/v1/admin/users/${id}`,
+        `${BASE_URL}/admin/users/${id}`,
         { [field]: value },
         { withCredentials: true }
       );
@@ -164,7 +162,7 @@ const UserProfilePage = ({ mode }) => {
     if (!window.confirm("Are you sure you want to permanently delete this user?")) return;
 
     try {
-      const res = await axios.delete(`${BASE_URL}/api/v1/admin/users/${id}`, {
+      const res = await axios.delete(`${BASE_URL}/admin/users/${id}`, {
         withCredentials: true,
       });
 
