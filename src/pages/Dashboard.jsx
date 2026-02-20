@@ -1,4 +1,4 @@
-// src/pages/Dashboard.jsx - UPDATED WITH ADVANCED DEBUGGING
+// src/pages/Dashboard.jsx - UPDATED WITH ENV VARIABLE FOR API URL
 import { useState, useEffect } from "react";
 import {
   Grid,
@@ -38,6 +38,9 @@ import { useAuth } from "../context/authContext";
 import { useNavigate } from "react-router-dom";
 import StatsCards from "../components/company/dashboard/StatsCards";
 import LoadingSpinner from "../components/company/common/LoadingSpinner";
+
+// API Base URL from environment or fallback to production
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com/api/v1';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -153,7 +156,7 @@ const Dashboard = () => {
 
       // Check if backend is accessible first
       try {
-        const healthCheck = await fetch("http://localhost:3000/api/v1/health");
+        const healthCheck = await fetch(`${API_BASE_URL}/health`);
         console.log("🏥 Backend health check:", healthCheck.status, healthCheck.ok);
       } catch (healthError) {
         console.error("❌ Backend server not reachable:", healthError);
@@ -161,9 +164,9 @@ const Dashboard = () => {
         throw new Error("Backend server not reachable");
       }
 
-      console.log("🔄 Fetching dashboard from: http://localhost:3000/api/v1/company/workflow/dashboard");
+      console.log(`🔄 Fetching dashboard from: ${API_BASE_URL}/company/workflow/dashboard`);
       
-      const response = await fetch("http://localhost:3000/api/v1/company/workflow/dashboard", {
+      const response = await fetch(`${API_BASE_URL}/company/workflow/dashboard`, {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -244,7 +247,7 @@ const Dashboard = () => {
 
   const handleTestBackend = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/v1/health");
+      const response = await fetch(`${API_BASE_URL}/health`);
       const data = await response.json();
       showSnackbar(`Backend: ${data.message}`, "success");
       console.log("🏥 Backend test:", data);
