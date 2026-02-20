@@ -3,6 +3,9 @@ import { useParams } from "react-router-dom";
 import api from "../../services/api"; // your axios instance
 import { toast } from "react-toastify";
 
+// API Base URL from environment or fallback to production
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com';
+
 export default function UserDetail() {
   const { userId } = useParams();
   const [user, setUser] = useState(null);
@@ -10,7 +13,7 @@ export default function UserDetail() {
 
   const fetchUser = async () => {
     try {
-      const res = await api.get(`/api/v1/admin/user/${userId}`);
+      const res = await api.get(`/admin/user/${userId}`);
       setUser(res.data.user);
     } catch (err) {
       toast.error("Failed to fetch user details");
@@ -21,7 +24,7 @@ export default function UserDetail() {
 
   const toggleSuspend = async () => {
     try {
-      await api.put(`/api/v1/admin/user/suspend/${userId}`);
+      await api.put(`/admin/user/suspend/${userId}`);
       toast.success("User suspension updated");
       fetchUser(); // refresh
     } catch (err) {
@@ -54,7 +57,7 @@ export default function UserDetail() {
       <h3>Profile</h3>
       {user.profile?.profilePhoto && (
         <img
-          src={`http://localhost:3000/${user.profile.profilePhoto}`}
+          src={`${API_BASE_URL}/${user.profile.profilePhoto}`}
           alt="Profile"
           width="150"
         />
@@ -65,7 +68,7 @@ export default function UserDetail() {
       {user.profile?.resume && (
         <p>
           <strong>Resume:</strong>{" "}
-          <a href={`http://localhost:3000/${user.profile.resume}`} target="_blank">Download</a>
+          <a href={`${API_BASE_URL}/${user.profile.resume}`} target="_blank" rel="noopener noreferrer">Download</a>
         </p>
       )}
 
@@ -75,7 +78,7 @@ export default function UserDetail() {
           <ul>
             {user.profile.documents.map((doc, i) => (
               <li key={i}>
-                <a href={`http://localhost:3000/${doc}`} target="_blank">Document {i + 1}</a>
+                <a href={`${API_BASE_URL}/${doc}`} target="_blank" rel="noopener noreferrer">Document {i + 1}</a>
               </li>
             ))}
           </ul>
