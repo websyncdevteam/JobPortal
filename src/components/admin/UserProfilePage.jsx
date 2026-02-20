@@ -1,10 +1,8 @@
 // src/components/admin/UserProfilePage.jsx
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../services/api"; // <-- use the shared axios instance
 import { toast } from "sonner";
-
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com/api/v1';
 
 /**
  * UserProfilePage
@@ -44,7 +42,7 @@ const UserProfilePage = ({ mode }) => {
     if (isCreateMode) return;
     setLoading(true);
     try {
-      const res = await axios.get(`${BASE_URL}/admin/users/${id}`, {
+      const res = await api.get(`/admin/users/${id}`, {
         withCredentials: true,
       });
 
@@ -73,14 +71,16 @@ const UserProfilePage = ({ mode }) => {
   const getFileUrl = (filePath) => {
     if (!filePath) return "";
     if (filePath.startsWith("http")) return filePath;
-    if (filePath.startsWith("/uploads/")) return `${BASE_URL}${filePath}`;
+    // For file URLs, use the base URL from api.defaults.baseURL
+    const base = api.defaults.baseURL || 'https://www.backendserver.aim9hire.com/api/v1';
+    if (filePath.startsWith("/uploads/")) return `${base}${filePath}`;
     if (filePath.includes("/uploads/")) {
       const filename = filePath.split("/uploads/").pop();
-      return `${BASE_URL}/uploads/${filename}`;
+      return `${base}/uploads/${filename}`;
     }
-    if (!filePath.includes("/")) return `${BASE_URL}/uploads/${filePath}`;
+    if (!filePath.includes("/")) return `${base}/uploads/${filePath}`;
     const filename = filePath.split("/").pop();
-    return `${BASE_URL}/uploads/${filename}`;
+    return `${base}/uploads/${filename}`;
   };
 
   // ---- Create new user ----
@@ -91,8 +91,8 @@ const UserProfilePage = ({ mode }) => {
 
     try {
       setUpdating(true);
-      const res = await axios.post(
-        `${BASE_URL}/admin/users`,
+      const res = await api.post(
+        `/admin/users`,
         { ...user },
         { withCredentials: true }
       );
@@ -121,8 +121,8 @@ const UserProfilePage = ({ mode }) => {
 
     try {
       setUpdating(true);
-      const res = await axios.put(
-        `${BASE_URL}/admin/users/${id}`,
+      const res = await api.put(
+        `/admin/users/${id}`,
         { [field]: value },
         { withCredentials: true }
       );
@@ -162,7 +162,7 @@ const UserProfilePage = ({ mode }) => {
     if (!window.confirm("Are you sure you want to permanently delete this user?")) return;
 
     try {
-      const res = await axios.delete(`${BASE_URL}/admin/users/${id}`, {
+      const res = await api.delete(`/admin/users/${id}`, {
         withCredentials: true,
       });
 
