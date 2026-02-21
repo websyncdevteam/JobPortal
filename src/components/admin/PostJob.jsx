@@ -139,33 +139,40 @@ const PostJob = () => {
     "Freelance",
     "Internship",
   ];
+useEffect(() => {
+  const fetchCompanies = async () => {
+    try {
+      const token = user?.token || localStorage.getItem("authToken");
+      if (!token) {
+        toast.error("You are not authorized to fetch companies.");
+        return;
+      }
 
-  // Fetch companies using the shared api instance
-  useEffect(() => {
-    const fetchCompanies = async () => {
-      try {
-        const token = user?.token || localStorage.getItem("authToken");
-        if (!token) {
-          toast.error("You are not authorized to fetch companies.");
-          return;
-        }
+      const res = await api.get("/admin/companies");
 
-        // ✅ Use api.get with relative path – api already includes baseURL and token header
-        const res = await api.get("/admin/companies");
-
-        if (res.data.success) {
-          setCompanies(res.data.data);
+      if (res.data.success) {
+        setCompanies(res.data.data);
+      } else {
+        // If success false but message is "No companies found.", treat as empty list
+        if (res.data.message === "No companies found.") {
+          setCompanies([]);
         } else {
           toast.error("Failed to fetch companies");
         }
-      } catch (err) {
+      }
+    } catch (err) {
+      // Check if the error response is 404 with "No companies found."
+      if (err.response?.status === 404 && err.response?.data?.message === "No companies found.") {
+        setCompanies([]); // No companies, that's fine
+      } else {
         console.error(err);
         toast.error("Error fetching companies. Check console.");
       }
-    };
+    }
+  };
 
-    fetchCompanies();
-  }, [user]);
+  fetchCompanies();
+}, [user]);
 
   const handleChange = (e) => {
     if (e.target.name === "skillsInput") {
