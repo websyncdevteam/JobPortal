@@ -57,94 +57,110 @@ import {
 // Use environment variable or production URL
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com';
 
-// Enhanced status options with icons and descriptions
+// ✅ Updated status options to match backend model
 const statusOptions = [
   { 
-    value: "pending", 
-    label: "Pending Review", 
+    value: "applied", 
+    label: "Applied", 
     category: "applied", 
     icon: <PendingIcon />,
-    description: "Application received, awaiting initial review",
+    description: "Application received",
     color: "default"
   },
   { 
-    value: "under review", 
-    label: "Under Review", 
+    value: "recruiter_screening", 
+    label: "Recruiter Screening", 
     category: "review", 
     icon: <PersonIcon />,
-    description: "Application is being evaluated by recruiters",
+    description: "Application is being screened by recruiter",
     color: "info"
   },
   { 
-    value: "shortlisted", 
-    label: "Shortlisted", 
-    category: "review", 
+    value: "recruiter_interview", 
+    label: "Recruiter Interview", 
+    category: "interview", 
+    icon: <PersonIcon />,
+    description: "Recruiter interview scheduled/completed",
+    color: "secondary"
+  },
+  { 
+    value: "pushed_to_company", 
+    label: "Pushed to Company", 
+    category: "company", 
     icon: <StarIcon />,
-    description: "Candidate has been shortlisted for next round",
+    description: "Candidate forwarded to company",
     color: "primary"
   },
   { 
-    value: "forwarded to first round", 
-    label: "First Technical Round", 
+    value: "company_first_round", 
+    label: "Company Round 1", 
     category: "interview", 
     icon: <PersonIcon />,
-    description: "Forwarded to first technical interview",
+    description: "First round with company",
     color: "secondary"
   },
   { 
-    value: "forwarded to second round", 
-    label: "Second Technical Round", 
+    value: "company_second_round", 
+    label: "Company Round 2", 
     category: "interview", 
     icon: <PersonIcon />,
-    description: "Forwarded to second technical interview",
+    description: "Second round with company",
     color: "secondary"
   },
   { 
-    value: "interview scheduled", 
-    label: "Interview Scheduled", 
+    value: "company_third_round", 
+    label: "Company Round 3", 
     category: "interview", 
     icon: <PersonIcon />,
-    description: "Interview has been scheduled with candidate",
-    color: "warning"
+    description: "Third round with company",
+    color: "secondary"
   },
   { 
     value: "selected", 
     label: "Selected", 
     category: "offer", 
     icon: <CheckIcon />,
-    description: "Candidate has been selected for offer",
+    description: "Candidate selected for offer",
     color: "success"
   },
   { 
-    value: "accepted", 
-    label: "Offer Accepted", 
-    category: "hired", 
-    icon: <CheckIcon />,
-    description: "Candidate has accepted the offer",
-    color: "success"
-  },
-  { 
-    value: "rejected", 
-    label: "Rejected", 
+    value: "rejected_by_recruiter", 
+    label: "Rejected (Recruiter)", 
     category: "rejected", 
     icon: <CancelIcon />,
-    description: "Candidate has been rejected",
+    description: "Rejected by recruiter",
     color: "error"
   },
   { 
-    value: "on hold", 
-    label: "On Hold", 
-    category: "hold", 
-    icon: <PendingIcon />,
-    description: "Application put on hold temporarily",
-    color: "default"
+    value: "rejected_by_company", 
+    label: "Rejected (Company)", 
+    category: "rejected", 
+    icon: <CancelIcon />,
+    description: "Rejected by company",
+    color: "error"
+  },
+  { 
+    value: "offer_sent", 
+    label: "Offer Sent", 
+    category: "offer", 
+    icon: <CheckIcon />,
+    description: "Offer letter sent",
+    color: "success"
+  },
+  { 
+    value: "offer_accepted", 
+    label: "Offer Accepted", 
+    category: "hired", 
+    icon: <CheckIcon />,
+    description: "Offer accepted",
+    color: "success"
   },
   { 
     value: "joined", 
     label: "Joined", 
     category: "hired", 
     icon: <CheckIcon />,
-    description: "Candidate has joined the organization",
+    description: "Candidate joined",
     color: "success"
   }
 ];
@@ -259,7 +275,7 @@ const AdminApplicants = () => {
     };
 
     applications?.forEach(app => {
-      const status = safeGet(app, 'status', 'pending');
+      const status = safeGet(app, 'status', 'applied');
       stats.byStatus[status] = (stats.byStatus[status] || 0) + 1;
       
       const statusOption = statusOptions.find(opt => opt.value === status);
@@ -481,11 +497,11 @@ const AdminApplicants = () => {
                   <CardContent>
                     <Typography variant="h6" gutterBottom>Application Status</Typography>
                     <Box sx={{ mb: 2 }}>
-                      <StatusChip status={safeGet(applicant, 'status', 'pending')} size="medium" />
+                      <StatusChip status={safeGet(applicant, 'status', 'applied')} size="medium" />
                     </Box>
                     <FormControl fullWidth size="small">
                       <Select
-                        value={safeGet(applicant, 'status', 'pending')}
+                        value={safeGet(applicant, 'status', 'applied')}
                         onChange={(e) => handleStatusChange(applicant._id, e.target.value)}
                       >
                         {statusOptions.map((status) => (
@@ -565,7 +581,7 @@ const AdminApplicants = () => {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 {safeGet(user, 'email', 'No email')}
               </Typography>
-              <StatusChip status={safeGet(applicant, 'status', 'pending')} />
+              <StatusChip status={safeGet(applicant, 'status', 'applied')} />
             </Box>
           </Box>
 
@@ -745,7 +761,7 @@ const AdminApplicants = () => {
                             </TableCell>
                             
                             <TableCell>
-                              <StatusChip status={safeGet(applicant, 'status', 'pending')} />
+                              <StatusChip status={safeGet(applicant, 'status', 'applied')} />
                             </TableCell>
                             
                             <TableCell>
@@ -795,7 +811,7 @@ const AdminApplicants = () => {
                                 <Tooltip title="Quick Status Update">
                                   <FormControl size="small" sx={{ minWidth: 140 }}>
                                     <Select
-                                      value={safeGet(applicant, 'status', 'pending')}
+                                      value={safeGet(applicant, 'status', 'applied')}
                                       onChange={(e) => {
                                         e.stopPropagation();
                                         handleStatusChange(applicant._id, e.target.value);
