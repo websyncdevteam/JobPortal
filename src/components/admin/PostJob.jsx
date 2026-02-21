@@ -1,7 +1,8 @@
+// src/components/admin/PostJob.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
-import axios from "axios";
+import api from "../../services/api"; // ✅ use shared axios instance
 import {
   Box,
   Grid,
@@ -31,9 +32,6 @@ import {
 } from "@mui/icons-material";
 import { toast } from "sonner";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-
-// API Base URL from environment or fallback to production
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com';
 
 // Create a custom theme with black and orange
 const theme = createTheme({
@@ -142,7 +140,7 @@ const PostJob = () => {
     "Internship",
   ];
 
-  // Fetch companies
+  // Fetch companies using the shared api instance
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
@@ -152,13 +150,8 @@ const PostJob = () => {
           return;
         }
 
-        const res = await axios.get(
-          `${API_BASE_URL}/api/v1/admin/companies`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            withCredentials: true,
-          }
-        );
+        // ✅ Use api.get with relative path – api already includes baseURL and token header
+        const res = await api.get("/admin/companies");
 
         if (res.data.success) {
           setCompanies(res.data.data);
@@ -226,16 +219,9 @@ const PostJob = () => {
         jobType: form.jobType,
       };
 
-      const token = user?.token || localStorage.getItem("authToken");
-      const endpoint =
-        user?.role === "admin"
-          ? `${API_BASE_URL}/api/v1/admin/jobs`
-          : `${API_BASE_URL}/api/v1/recruiter/jobs`;
+      const endpoint = user?.role === "admin" ? "/admin/jobs" : "/recruiter/jobs";
 
-      const res = await axios.post(endpoint, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-        withCredentials: true,
-      });
+      const res = await api.post(endpoint, payload);
 
       if (res.data.success) {
         toast.success(res.data.message || "Job posted successfully");
@@ -506,4 +492,4 @@ const PostJob = () => {
   );
 };
 
-export default PostJob; 
+export default PostJob;
