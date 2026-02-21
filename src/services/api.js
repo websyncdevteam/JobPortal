@@ -16,8 +16,11 @@ const api = axios.create({
 // ==============================
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token'); // ✅ single source of truth
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+    // Try both possible token keys
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -32,7 +35,9 @@ api.interceptors.response.use(
     const status = error.response?.status;
 
     if (status === 401) {
+      // Clear both possible token keys
       localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
       localStorage.removeItem('user');
       toast.error('Session expired. Please login again.');
       setTimeout(() => (window.location.href = '/login'), 1200);
