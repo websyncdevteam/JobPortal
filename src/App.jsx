@@ -1,4 +1,4 @@
-// src/App.jsx - UPDATED WITH VERIFICATION
+// src/App.jsx - UPDATED WITH TEAM MANAGEMENT ROUTES
 import React, { useEffect, useState } from "react";
 import {
   createBrowserRouter,
@@ -19,7 +19,7 @@ import { AuthProvider } from "./context/authContext";
 
 // Components
 import ProtectedRoute from "./components/common/ProtectedRoute";
-import VerificationRequired from "./components/common/VerificationRequired"; // ✅ ADD THIS
+import VerificationRequired from "./components/common/VerificationRequired";
 import Sidebar from "./components/company/layout/Sidebar";
 import TopBar from "./components/company/layout/TopBar";
 import NotificationCenter from "./components/company/layout/NotificationCenter";
@@ -39,6 +39,8 @@ import AdminJobs from "./components/admin/AdminJobs";
 import PostJob from "./components/admin/PostJob";
 import EditJob from "./components/admin/EditJob";
 import RecruiterManagement from "./components/admin/RecruiterManagement";
+import AdminTeamManagement from "./components/admin/AdminTeamManagement";       // NEW
+import SubAdminTeamManagement from "./components/admin/SubAdminTeamManagement"; // NEW
 
 // Recruiter
 import RecruiterLayout from "./components/recruiter/RecruiterLayout";
@@ -58,10 +60,11 @@ import Settings from "./components/company/Settings";
 import InterviewSlots from "./pages/InterviewSlots";
 import NotificationsPage from "./pages/NotificationsPage.jsx";
 import VerifyEmail from './pages/VerifyEmail';
-import CheckEmail from "./pages/CheckEmail"; // ✅ ADDED
+import CheckEmail from "./pages/CheckEmail";
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword.jsx';
 import RecruiterSettings from "./components/recruiter/Settings";
+
 // Freelancer pages
 import FreelancerOnboarding from "./pages/freelancer/Onboarding";
 import FreelancerDashboard from "./pages/freelancer/Dashboard";
@@ -97,16 +100,14 @@ const theme = createTheme({
   shape: { borderRadius: 8 },
 });
 
-// ✅ NEW: VERIFICATION PROTECTION WRAPPER
+// ✅ VERIFICATION PROTECTION WRAPPER
 function VerifiedRoute({ children, roles = [], adminExempt = true }) {
   const { user } = useSelector((s) => s.auth);
   
-  // Check if user has required role
   if (roles.length > 0 && !roles.includes(user?.role)) {
     return <Navigate to="/" replace />;
   }
   
-  // ✅ Check verification (admin is exempt by default)
   const isAdminExempt = adminExempt && user?.role === "admin";
   
   if (!isAdminExempt && user && !user.isVerified) {
@@ -124,7 +125,6 @@ function CompanyLayout() {
 
   if (!user) return <Navigate to="/login" replace />;
   
-  // ✅ Check verification for company users
   if (user.role !== "admin" && !user.isVerified) {
     return <VerificationRequired email={user.email} />;
   }
@@ -158,7 +158,6 @@ function CompanyLayout() {
 function FreelancerLayout() {
   const { user } = useSelector((s) => s.auth);
   
-  // ✅ Check verification for freelancer
   if (user && !user.isVerified) {
     return <VerificationRequired email={user.email} />;
   }
@@ -213,11 +212,11 @@ const router = createBrowserRouter([
   { path: "/privacy-policy", element: <PrivacyPolicy /> },
   { path: "/join-freelancer", element: <JoinFreelancer /> },
   { path: "/verify-email", element: <VerifyEmail /> },
-  { path: "/check-email", element: <CheckEmail /> }, // ✅ ADDED
+  { path: "/check-email", element: <CheckEmail /> },
   { path: "/forgot-password", element: <ForgotPassword /> },
   { path: "/reset-password", element: <ResetPassword /> },
 
-  // ✅ Protected profile routes (require verification)
+  // Protected profile routes
   { 
     path: "/profile", 
     element: (
@@ -239,7 +238,7 @@ const router = createBrowserRouter([
     ) 
   },
 
-  // Admin routes (admin exempt from verification)
+  // Admin routes
   {
     path: "/admin",
     element: (
@@ -262,6 +261,8 @@ const router = createBrowserRouter([
       { path: "jobs/:jobId/edit", element: <EditJob /> },
       { path: "jobs/:jobId/applicants", element: <AdminApplicants /> },
       { path: "recruiters", element: <RecruiterManagement /> },
+      // NEW: Team management for admin
+      { path: "teams", element: <AdminTeamManagement /> },
     ],
   },
 
@@ -276,7 +277,7 @@ const router = createBrowserRouter([
     ),
   },
 
-  // Recruiter routes (require verification)
+  // Recruiter routes
   {
     path: "/recruiter",
     element: (
@@ -294,11 +295,13 @@ const router = createBrowserRouter([
       { path: "candidates", element: <CandidateManagement /> },
       { path: "interviews", element: <InterviewScheduling /> },
       { path: "analytics", element: <AnalyticsRecruiter /> },
-       { path: "settings", element: <Settings /> },
+      { path: "settings", element: <Settings /> },
+      // NEW: Sub-admin team management (only visible if user.isTeamAdmin)
+      { path: "my-team", element: <SubAdminTeamManagement /> },
     ],
   },
 
-  // Company routes (require verification)
+  // Company routes
   {
     path: "/company",
     element: (
@@ -322,9 +325,8 @@ const router = createBrowserRouter([
       { path: "settings", element: <Settings /> },
     ],
   },
-  
 
-  // Freelancer routes (require verification)
+  // Freelancer routes
   {
     path: "/freelancer",
     element: (
@@ -344,7 +346,6 @@ const router = createBrowserRouter([
       { path: "placements/:id", element: <PlacementDetails /> },
     ],
   },
-  
 
   // fallback
   {
