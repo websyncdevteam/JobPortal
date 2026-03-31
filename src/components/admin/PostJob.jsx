@@ -139,40 +139,49 @@ const PostJob = () => {
     "Freelance",
     "Internship",
   ];
-useEffect(() => {
-  const fetchCompanies = async () => {
-    try {
-      const token = user?.token || localStorage.getItem("authToken");
-      if (!token) {
-        toast.error("You are not authorized to fetch companies.");
-        return;
-      }
 
-      const res = await api.get("/admin/companies");
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const token = user?.token || localStorage.getItem("authToken");
+        if (!token) {
+          toast.error("You are not authorized to fetch companies.");
+          return;
+        }
 
-      if (res.data.success) {
-        setCompanies(res.data.data);
-      } else {
-        // If success false but message is "No companies found.", treat as empty list
-        if (res.data.message === "No companies found.") {
+        // 🔥 Different endpoint for admin vs. recruiter (team)
+        let url = "/admin/companies";   // default for admin
+        if (user?.role !== "admin") {
+          url = "/team/companies";      // recruiter (sub-admin) → only team companies
+        }
+
+        const res = await api.get(url);
+
+        if (res.data.success) {
+          setCompanies(res.data.data);
+        } else {
+          // If success false but message is "No companies found.", treat as empty list
+          if (res.data.message === "No companies found.") {
+            setCompanies([]);
+          } else {
+            toast.error("Failed to fetch companies");
+          }
+        }
+      } catch (err) {
+        // For recruiters with no team, the backend returns 404 with a message
+        if (err.response?.status === 404 && err.response?.data?.message === "No team found") {
+          setCompanies([]); // No team → no companies
+        } else if (err.response?.status === 404 && err.response?.data?.message === "No companies found.") {
           setCompanies([]);
         } else {
-          toast.error("Failed to fetch companies");
+          console.error(err);
+          toast.error("Error fetching companies. Check console.");
         }
       }
-    } catch (err) {
-      // Check if the error response is 404 with "No companies found."
-      if (err.response?.status === 404 && err.response?.data?.message === "No companies found.") {
-        setCompanies([]); // No companies, that's fine
-      } else {
-        console.error(err);
-        toast.error("Error fetching companies. Check console.");
-      }
-    }
-  };
+    };
 
-  fetchCompanies();
-}, [user]);
+    fetchCompanies();
+  }, [user]);
 
   const handleChange = (e) => {
     if (e.target.name === "skillsInput") {
