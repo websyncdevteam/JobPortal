@@ -1,4 +1,4 @@
-// src/components/admin/AdminLayout.jsx - EXTREMELY RESPONSIVE + DARK THEME
+// src/components/admin/AdminLayout.jsx - EXTREMELY RESPONSIVE + DARK THEME + TEAMS
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LogOut, 
@@ -102,7 +102,7 @@ const AdminLayout = () => {
     toast.success(`${darkMode ? 'Light' : 'Dark'} mode activated`);
   };
 
-  // Navigation items
+  // Navigation items (added Teams)
   const navItems = [
     { 
       path: '/admin/dashboard', 
@@ -133,6 +133,12 @@ const AdminLayout = () => {
       label: 'Recruiters', 
       icon: <UserCog size={20} />,
       description: 'Recruiter management'
+    },
+    { 
+      path: '/admin/teams', 
+      label: 'Teams', 
+      icon: <Shield size={20} />,
+      description: 'Manage teams and team members'
     },
   ];
 
