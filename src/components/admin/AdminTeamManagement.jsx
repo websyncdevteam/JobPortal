@@ -20,6 +20,7 @@ import {
   TableRow,
   TextField,
   Typography,
+  CircularProgress,
 } from '@mui/material';
 import { Add, Delete, Edit, Visibility } from '@mui/icons-material';
 
@@ -29,6 +30,7 @@ const AdminTeamManagement = () => {
   const [availableCompanies, setAvailableCompanies] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [assigning, setAssigning] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTeam, setEditTeam] = useState(null);
   const [teamForm, setTeamForm] = useState({ name: '', description: '', subAdminId: '' });
@@ -61,7 +63,6 @@ const AdminTeamManagement = () => {
   const fetchCompanies = async () => {
     try {
       const res = await api.get('/admin/companies');
-      // Handle multiple possible response structures
       let comps = [];
       if (res.data.companies) comps = res.data.companies;
       else if (res.data.data) comps = res.data.data;
@@ -103,7 +104,7 @@ const AdminTeamManagement = () => {
       setDialogOpen(false);
       setEditTeam(null);
       setTeamForm({ name: '', description: '', subAdminId: '' });
-      fetchTeams();
+      fetchTeams(); // refresh list
     } catch (err) {
       toast.error(err.response?.data?.message || 'Operation failed');
     }
@@ -137,18 +138,28 @@ const AdminTeamManagement = () => {
 
   const handleAssignCompany = async () => {
     if (!selectedTeam || !selectedCompanyId) return;
+    setAssigning(true);
     try {
       await api.post(`/admin/teams/${selectedTeam._id}/assign-company`, { companyId: selectedCompanyId });
       toast.success('Company assigned to team');
+      
+      // Refresh team companies list
       const res = await api.get(`/admin/teams/${selectedTeam._id}/companies`);
       const assignedCompanies = res.data.data;
       setTeamCompanies(assignedCompanies);
+      
+      // Update available companies dropdown
       const assignedIds = assignedCompanies.map(c => c._id);
       const newAvailable = allCompanies.filter(c => !assignedIds.includes(c._id));
       setAvailableCompanies(newAvailable);
       setSelectedCompanyId('');
+      
+      // Refresh the main teams list to update the company count
+      await fetchTeams();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Assignment failed');
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -157,13 +168,20 @@ const AdminTeamManagement = () => {
     try {
       await api.delete(`/admin/teams/${selectedTeam._id}/companies/${companyId}`);
       toast.success('Company removed from team');
+      
+      // Refresh team companies
       const res = await api.get(`/admin/teams/${selectedTeam._id}/companies`);
       const assignedCompanies = res.data.data;
       setTeamCompanies(assignedCompanies);
+      
+      // Update available companies: add back the removed company
       const removedCompany = allCompanies.find(c => c._id === companyId);
       if (removedCompany) {
         setAvailableCompanies(prev => [...prev, removedCompany]);
       }
+      
+      // Refresh the main teams list to update the company count
+      await fetchTeams();
     } catch (err) {
       toast.error('Removal failed');
     }
@@ -250,12 +268,14 @@ const AdminTeamManagement = () => {
               </TableBody>
             </Table>
           </TableContainer>
-          <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+          <Box sx={{ display: 'flex', gap: 2, mt: 2, alignItems: 'center' }}>
             <Select size="small" value={selectedCompanyId} onChange={(e) => setSelectedCompanyId(e.target.value)} displayEmpty sx={{ minWidth: 200 }}>
               <MenuItem value="">Select a company</MenuItem>
               {availableCompanies.length === 0 ? <MenuItem disabled>No companies available</MenuItem> : availableCompanies.map(company => (<MenuItem key={company._id} value={company._id}>{company.name}</MenuItem>))}
             </Select>
-            <Button variant="outlined" onClick={handleAssignCompany}>Assign Company</Button>
+            <Button variant="outlined" onClick={handleAssignCompany} disabled={assigning}>
+              {assigning ? <CircularProgress size={24} /> : 'Assign Company'}
+            </Button>
           </Box>
         </DialogContent>
         <DialogActions>
