@@ -38,12 +38,13 @@ const AdminTeamManagement = () => {
   const [teamCompanies, setTeamCompanies] = useState([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
 
-  // Fetch teams and compute company counts from local allCompanies
+  // Fetch all teams
   const fetchTeams = async () => {
     try {
       setLoading(true);
       const res = await api.get('/admin/teams');
       const teamsData = res.data.data || [];
+      // Compute company count by filtering allCompanies (fallback to 0)
       const teamsWithCount = teamsData.map(team => ({
         ...team,
         memberCount: team.memberCount ?? 0,
@@ -57,6 +58,7 @@ const AdminTeamManagement = () => {
     }
   };
 
+  // Fetch all recruiters (for sub-admin dropdown)
   const fetchUsers = async () => {
     try {
       const res = await api.get('/admin/users');
@@ -67,6 +69,7 @@ const AdminTeamManagement = () => {
     }
   };
 
+  // Fetch all companies
   const fetchCompanies = async () => {
     try {
       const res = await api.get('/admin/companies');
@@ -80,17 +83,19 @@ const AdminTeamManagement = () => {
     }
   };
 
+  // Initial load
   useEffect(() => {
     fetchTeams();
     fetchUsers();
     fetchCompanies();
   }, []);
 
-  // Recompute team counts whenever companies change
+  // Refresh teams whenever allCompanies changes (so counts update)
   useEffect(() => {
-    if (allCompanies.length > 0) fetchTeams();
+    if (allCompanies.length) fetchTeams();
   }, [allCompanies]);
 
+  // Create or update team
   const handleCreateTeam = async () => {
     if (!teamForm.name) return toast.error('Team name is required');
     try {
@@ -115,11 +120,13 @@ const AdminTeamManagement = () => {
     }
   };
 
+  // Delete team
   const handleDeleteTeam = async (teamId) => {
     if (!window.confirm('Delete this team? This will unassign all members and companies.')) return;
     try {
       await api.delete(`/admin/teams/${teamId}`);
       toast.success('Team deleted');
+      // Remove team reference from companies in local state
       setAllCompanies(prev => prev.map(c => c.team === teamId ? { ...c, team: null } : c));
       await fetchTeams();
     } catch (err) {
@@ -127,12 +134,15 @@ const AdminTeamManagement = () => {
     }
   };
 
+  // Open team details dialog (shows assigned companies and dropdown)
   const viewTeamDetails = async (team) => {
     setSelectedTeam(team);
     try {
+      // Get assigned companies for this team
       const res = await api.get(`/admin/teams/${team._id}/companies`);
       const assigned = res.data.data || [];
       setTeamCompanies(assigned);
+      // Available = all companies minus those already assigned to this team
       const assignedIds = assigned.map(c => c._id);
       const available = allCompanies.filter(c => !assignedIds.includes(c._id));
       setAvailableCompanies(available);
@@ -142,6 +152,7 @@ const AdminTeamManagement = () => {
     }
   };
 
+  // Assign a company to the selected team
   const handleAssignCompany = async () => {
     if (!selectedTeam || !selectedCompanyId) return;
     setAssigning(true);
@@ -149,19 +160,20 @@ const AdminTeamManagement = () => {
       await api.post(`/admin/teams/${selectedTeam._id}/assign-company`, { companyId: selectedCompanyId });
       toast.success('Company assigned to team');
 
-      // Update local allCompanies (reflects new team assignment)
-      setAllCompanies(prev =>
-        prev.map(comp =>
-          comp._id === selectedCompanyId ? { ...comp, team: selectedTeam._id } : comp
-        )
-      );
+      // Refresh companies list from server to get updated `team` field
+      await fetchCompanies();
 
-      // Refresh assigned list and available dropdown
+      // Refresh assigned companies for this team
       const res = await api.get(`/admin/teams/${selectedTeam._id}/companies`);
       const assigned = res.data.data || [];
       setTeamCompanies(assigned);
+
+      // Recompute available companies (exclude newly assigned)
       const assignedIds = assigned.map(c => c._id);
-      setAvailableCompanies(allCompanies.filter(c => !assignedIds.includes(c._id)));
+      const newAvailable = allCompanies.filter(c => !assignedIds.includes(c._id));
+      setAvailableCompanies(newAvailable);
+
+      // Clear selection
       setSelectedCompanyId('');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Assignment failed');
@@ -170,25 +182,25 @@ const AdminTeamManagement = () => {
     }
   };
 
+  // Remove a company from the team
   const handleRemoveCompany = async (companyId) => {
     if (!selectedTeam) return;
     try {
       await api.delete(`/admin/teams/${selectedTeam._id}/companies/${companyId}`);
       toast.success('Company removed from team');
 
-      // Update local allCompanies (remove team reference)
-      setAllCompanies(prev =>
-        prev.map(comp =>
-          comp._id === companyId ? { ...comp, team: null } : comp
-        )
-      );
+      // Refresh companies list
+      await fetchCompanies();
 
-      // Refresh assigned list and available dropdown
+      // Refresh assigned companies
       const res = await api.get(`/admin/teams/${selectedTeam._id}/companies`);
       const assigned = res.data.data || [];
       setTeamCompanies(assigned);
+
+      // Recompute available (now includes the removed company)
       const assignedIds = assigned.map(c => c._id);
-      setAvailableCompanies(allCompanies.filter(c => !assignedIds.includes(c._id)));
+      const newAvailable = allCompanies.filter(c => !assignedIds.includes(c._id));
+      setAvailableCompanies(newAvailable);
     } catch (err) {
       toast.error('Removal failed');
     }
@@ -203,6 +215,7 @@ const AdminTeamManagement = () => {
         </Button>
       </Box>
 
+      {/* Teams Table */}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -257,7 +270,7 @@ const AdminTeamManagement = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Team Details Dialog */}
+      {/* Team Details Dialog (Assign/Remove Companies) */}
       <Dialog open={!!selectedTeam} onClose={() => setSelectedTeam(null)} maxWidth="md" fullWidth>
         <DialogTitle>Team: {selectedTeam?.name}</DialogTitle>
         <DialogContent>
@@ -266,19 +279,36 @@ const AdminTeamManagement = () => {
             <Table size="small">
               <TableHead><TableRow><TableCell>Company Name</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>
               <TableBody>
-                {teamCompanies.length === 0 ? <TableRow><TableCell colSpan={2} align="center">No companies assigned</TableCell></TableRow> : teamCompanies.map(company => (
-                  <TableRow key={company._id}>
-                    <TableCell>{company.name}</TableCell>
-                    <TableCell><IconButton onClick={() => handleRemoveCompany(company._id)}><Delete /></IconButton></TableCell>
-                  </TableRow>
-                ))}
+                {teamCompanies.length === 0 ? (
+                  <TableRow><TableCell colSpan={2} align="center">No companies assigned</TableCell></TableRow>
+                ) : (
+                  teamCompanies.map(company => (
+                    <TableRow key={company._id}>
+                      <TableCell>{company.name}</TableCell>
+                      <TableCell><IconButton onClick={() => handleRemoveCompany(company._id)}><Delete /></IconButton></TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </TableContainer>
+
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Select size="small" value={selectedCompanyId} onChange={(e) => setSelectedCompanyId(e.target.value)} displayEmpty sx={{ minWidth: 200 }}>
+            <Select
+              size="small"
+              value={selectedCompanyId}
+              onChange={(e) => setSelectedCompanyId(e.target.value)}
+              displayEmpty
+              sx={{ minWidth: 200 }}
+            >
               <MenuItem value="">Select a company</MenuItem>
-              {availableCompanies.length === 0 ? <MenuItem disabled>No companies available</MenuItem> : availableCompanies.map(company => (<MenuItem key={company._id} value={company._id}>{company.name}</MenuItem>))}
+              {availableCompanies.length === 0 ? (
+                <MenuItem disabled>No companies available</MenuItem>
+              ) : (
+                availableCompanies.map(company => (
+                  <MenuItem key={company._id} value={company._id}>{company.name}</MenuItem>
+                ))
+              )}
             </Select>
             <Button variant="outlined" onClick={handleAssignCompany} disabled={assigning || !selectedCompanyId}>
               {assigning ? <CircularProgress size={24} /> : 'Assign Company'}
