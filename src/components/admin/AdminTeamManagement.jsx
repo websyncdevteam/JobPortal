@@ -38,13 +38,21 @@ const AdminTeamManagement = () => {
   const [teamCompanies, setTeamCompanies] = useState([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
 
+  // --- Data fetching ---
   const fetchTeams = async () => {
     try {
       setLoading(true);
       const res = await api.get('/admin/teams');
-      setTeams(res.data.data);
+      // Ensure each team has a companyCount (default 0 if missing)
+      const teamsWithCount = (res.data.data || []).map(team => ({
+        ...team,
+        companyCount: team.companyCount ?? 0,
+        memberCount: team.memberCount ?? 0,
+      }));
+      setTeams(teamsWithCount);
     } catch (err) {
       toast.error('Failed to load teams');
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -53,10 +61,10 @@ const AdminTeamManagement = () => {
   const fetchUsers = async () => {
     try {
       const res = await api.get('/admin/users');
-      const recruiters = res.data.users.filter(u => u.role === 'recruiter');
+      const recruiters = (res.data.users || []).filter(u => u.role === 'recruiter');
       setUsers(recruiters);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch users:', err);
     }
   };
 
@@ -83,6 +91,7 @@ const AdminTeamManagement = () => {
     fetchCompanies();
   }, []);
 
+  // --- Team CRUD ---
   const handleCreateTeam = async () => {
     if (!teamForm.name) {
       toast.error('Team name is required');
@@ -104,7 +113,7 @@ const AdminTeamManagement = () => {
       setDialogOpen(false);
       setEditTeam(null);
       setTeamForm({ name: '', description: '', subAdminId: '' });
-      fetchTeams(); // refresh list
+      await fetchTeams(); // refresh list
     } catch (err) {
       toast.error(err.response?.data?.message || 'Operation failed');
     }
@@ -115,17 +124,18 @@ const AdminTeamManagement = () => {
     try {
       await api.delete(`/admin/teams/${teamId}`);
       toast.success('Team deleted');
-      fetchTeams();
+      await fetchTeams();
     } catch (err) {
       toast.error('Failed to delete team');
     }
   };
 
+  // --- Company assignment management ---
   const viewTeamDetails = async (team) => {
     setSelectedTeam(team);
     try {
       const res = await api.get(`/admin/teams/${team._id}/companies`);
-      const assignedCompanies = res.data.data;
+      const assignedCompanies = res.data.data || [];
       setTeamCompanies(assignedCompanies);
       const assignedIds = assignedCompanies.map(c => c._id);
       const available = allCompanies.filter(c => !assignedIds.includes(c._id));
@@ -133,6 +143,7 @@ const AdminTeamManagement = () => {
       setSelectedCompanyId('');
     } catch (err) {
       toast.error('Failed to load team companies');
+      console.error(err);
     }
   };
 
@@ -142,19 +153,28 @@ const AdminTeamManagement = () => {
     try {
       await api.post(`/admin/teams/${selectedTeam._id}/assign-company`, { companyId: selectedCompanyId });
       toast.success('Company assigned to team');
-      
-      // Refresh team companies list
+
+      // Refresh assigned companies list
       const res = await api.get(`/admin/teams/${selectedTeam._id}/companies`);
-      const assignedCompanies = res.data.data;
+      const assignedCompanies = res.data.data || [];
       setTeamCompanies(assignedCompanies);
-      
-      // Update available companies dropdown
+
+      // Update available companies dropdown (remove assigned company)
       const assignedIds = assignedCompanies.map(c => c._id);
       const newAvailable = allCompanies.filter(c => !assignedIds.includes(c._id));
       setAvailableCompanies(newAvailable);
       setSelectedCompanyId('');
-      
-      // Refresh the main teams list to update the company count
+
+      // Optimistically update the team's company count in the main table
+      setTeams(prevTeams =>
+        prevTeams.map(team =>
+          team._id === selectedTeam._id
+            ? { ...team, companyCount: (team.companyCount || 0) + 1 }
+            : team
+        )
+      );
+
+      // Finally, refresh the main list from server to ensure consistency
       await fetchTeams();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Assignment failed');
@@ -168,25 +188,35 @@ const AdminTeamManagement = () => {
     try {
       await api.delete(`/admin/teams/${selectedTeam._id}/companies/${companyId}`);
       toast.success('Company removed from team');
-      
-      // Refresh team companies
+
+      // Refresh assigned companies list
       const res = await api.get(`/admin/teams/${selectedTeam._id}/companies`);
-      const assignedCompanies = res.data.data;
+      const assignedCompanies = res.data.data || [];
       setTeamCompanies(assignedCompanies);
-      
-      // Update available companies: add back the removed company
+
+      // Add the removed company back to available list
       const removedCompany = allCompanies.find(c => c._id === companyId);
       if (removedCompany) {
         setAvailableCompanies(prev => [...prev, removedCompany]);
       }
-      
-      // Refresh the main teams list to update the company count
+
+      // Optimistically decrement the team's company count
+      setTeams(prevTeams =>
+        prevTeams.map(team =>
+          team._id === selectedTeam._id
+            ? { ...team, companyCount: Math.max(0, (team.companyCount || 0) - 1) }
+            : team
+        )
+      );
+
+      // Refresh from server
       await fetchTeams();
     } catch (err) {
       toast.error('Removal failed');
     }
   };
 
+  // --- Render ---
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -209,46 +239,119 @@ const AdminTeamManagement = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {teams.map((team) => (
-              <TableRow key={team._id}>
-                <TableCell>{team.name}</TableCell>
-                <TableCell>{team.description}</TableCell>
-                <TableCell>{team.subAdmin ? team.subAdmin.fullname : 'None'}</TableCell>
-                <TableCell>{team.memberCount || 0}</TableCell>
-                <TableCell>{team.companyCount || 0}</TableCell>
-                <TableCell>
-                  <IconButton onClick={() => viewTeamDetails(team)}><Visibility /></IconButton>
-                  <IconButton onClick={() => { setEditTeam(team); setTeamForm({ name: team.name, description: team.description || '', subAdminId: team.subAdmin?._id || '' }); setDialogOpen(true); }}><Edit /></IconButton>
-                  <IconButton onClick={() => handleDeleteTeam(team._id)}><Delete /></IconButton>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center">
+                  <CircularProgress size={40} />
                 </TableCell>
               </TableRow>
-            ))}
+            ) : teams.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center">
+                  No teams created yet. Click "New Team" to get started.
+                </TableCell>
+              </TableRow>
+            ) : (
+              teams.map((team) => (
+                <TableRow key={team._id}>
+                  <TableCell>{team.name}</TableCell>
+                  <TableCell>{team.description || '-'}</TableCell>
+                  <TableCell>{team.subAdmin ? team.subAdmin.fullname : 'None'}</TableCell>
+                  <TableCell>{team.memberCount || 0}</TableCell>
+                  <TableCell>{team.companyCount || 0}</TableCell>
+                  <TableCell>
+                    <IconButton onClick={() => viewTeamDetails(team)}>
+                      <Visibility />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => {
+                        setEditTeam(team);
+                        setTeamForm({
+                          name: team.name,
+                          description: team.description || '',
+                          subAdminId: team.subAdmin?._id || '',
+                        });
+                        setDialogOpen(true);
+                      }}
+                    >
+                      <Edit />
+                    </IconButton>
+                    <IconButton onClick={() => handleDeleteTeam(team._id)}>
+                      <Delete />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
 
       {/* Create/Edit Team Dialog */}
-      <Dialog open={dialogOpen} onClose={() => { setDialogOpen(false); setEditTeam(null); setTeamForm({ name: '', description: '', subAdminId: '' }); }} maxWidth="sm" fullWidth>
+      <Dialog
+        open={dialogOpen}
+        onClose={() => {
+          setDialogOpen(false);
+          setEditTeam(null);
+          setTeamForm({ name: '', description: '', subAdminId: '' });
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>{editTeam ? 'Edit Team' : 'Create Team'}</DialogTitle>
         <DialogContent>
-          <TextField autoFocus margin="dense" label="Team Name" fullWidth value={teamForm.name} onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })} />
-          <TextField margin="dense" label="Description" fullWidth multiline rows={3} value={teamForm.description} onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })} />
-          <Select fullWidth margin="dense" value={teamForm.subAdminId} onChange={(e) => setTeamForm({ ...teamForm, subAdminId: e.target.value })} displayEmpty>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Team Name"
+            fullWidth
+            value={teamForm.name}
+            onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
+          />
+          <TextField
+            margin="dense"
+            label="Description"
+            fullWidth
+            multiline
+            rows={3}
+            value={teamForm.description}
+            onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })}
+          />
+          <Select
+            fullWidth
+            margin="dense"
+            value={teamForm.subAdminId}
+            onChange={(e) => setTeamForm({ ...teamForm, subAdminId: e.target.value })}
+            displayEmpty
+          >
             <MenuItem value="">None (no sub-admin)</MenuItem>
-            {users.map(user => (<MenuItem key={user._id} value={user._id}>{user.fullname} ({user.email})</MenuItem>))}
+            {users.map((user) => (
+              <MenuItem key={user._id} value={user._id}>
+                {user.fullname} ({user.email})
+              </MenuItem>
+            ))}
           </Select>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleCreateTeam} variant="contained">Save</Button>
+          <Button onClick={handleCreateTeam} variant="contained">
+            Save
+          </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Team Details Dialog */}
-      <Dialog open={!!selectedTeam} onClose={() => setSelectedTeam(null)} maxWidth="md" fullWidth>
+      {/* Team Details Dialog (Assign/Remove Companies) */}
+      <Dialog
+        open={!!selectedTeam}
+        onClose={() => setSelectedTeam(null)}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>Team: {selectedTeam?.name}</DialogTitle>
         <DialogContent>
-          <Typography variant="h6" gutterBottom>Assigned Companies</Typography>
+          <Typography variant="h6" gutterBottom>
+            Assigned Companies
+          </Typography>
           <TableContainer component={Paper} sx={{ mb: 2 }}>
             <Table size="small">
               <TableHead>
@@ -258,22 +361,52 @@ const AdminTeamManagement = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {teamCompanies.map(company => (
-                  <TableRow key={company._id}>
-                    <TableCell>{company.name}</TableCell>
-                    <TableCell><IconButton onClick={() => handleRemoveCompany(company._id)}><Delete /></IconButton></TableCell>
+                {teamCompanies.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} align="center">
+                      No companies assigned
+                    </TableCell>
                   </TableRow>
-                ))}
-                {teamCompanies.length === 0 && <TableRow><TableCell colSpan={2}>No companies assigned</TableCell></TableRow>}
+                ) : (
+                  teamCompanies.map((company) => (
+                    <TableRow key={company._id}>
+                      <TableCell>{company.name}</TableCell>
+                      <TableCell>
+                        <IconButton onClick={() => handleRemoveCompany(company._id)}>
+                          <Delete />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </TableContainer>
+
           <Box sx={{ display: 'flex', gap: 2, mt: 2, alignItems: 'center' }}>
-            <Select size="small" value={selectedCompanyId} onChange={(e) => setSelectedCompanyId(e.target.value)} displayEmpty sx={{ minWidth: 200 }}>
+            <Select
+              size="small"
+              value={selectedCompanyId}
+              onChange={(e) => setSelectedCompanyId(e.target.value)}
+              displayEmpty
+              sx={{ minWidth: 200 }}
+            >
               <MenuItem value="">Select a company</MenuItem>
-              {availableCompanies.length === 0 ? <MenuItem disabled>No companies available</MenuItem> : availableCompanies.map(company => (<MenuItem key={company._id} value={company._id}>{company.name}</MenuItem>))}
+              {availableCompanies.length === 0 ? (
+                <MenuItem disabled>No companies available</MenuItem>
+              ) : (
+                availableCompanies.map((company) => (
+                  <MenuItem key={company._id} value={company._id}>
+                    {company.name}
+                  </MenuItem>
+                ))
+              )}
             </Select>
-            <Button variant="outlined" onClick={handleAssignCompany} disabled={assigning}>
+            <Button
+              variant="outlined"
+              onClick={handleAssignCompany}
+              disabled={assigning || !selectedCompanyId}
+            >
               {assigning ? <CircularProgress size={24} /> : 'Assign Company'}
             </Button>
           </Box>
