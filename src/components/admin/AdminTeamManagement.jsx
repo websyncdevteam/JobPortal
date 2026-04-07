@@ -38,22 +38,11 @@ const AdminTeamManagement = () => {
   const [teamCompanies, setTeamCompanies] = useState([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
 
-  // Helper to compute team company counts
-  const computeTeamCounts = (teamsData, companies) => {
-    return teamsData.map(team => ({
-      ...team,
-      memberCount: team.memberCount ?? 0,
-      companyCount: companies.filter(c => c.team === team._id).length,
-    }));
-  };
-
   const fetchTeams = async () => {
     try {
       setLoading(true);
       const res = await api.get('/admin/teams');
-      const teamsData = res.data.data || [];
-      const teamsWithCounts = computeTeamCounts(teamsData, allCompanies);
-      setTeams(teamsWithCounts);
+      setTeams(res.data.data || []);
     } catch (err) {
       toast.error('Failed to load teams');
     } finally {
@@ -79,29 +68,16 @@ const AdminTeamManagement = () => {
       else if (res.data.data) comps = res.data.data;
       else if (Array.isArray(res.data)) comps = res.data;
       setAllCompanies(comps);
-      return comps;
     } catch (err) {
       toast.error('Could not load companies');
-      return [];
     }
   };
 
-  // Initial load
   useEffect(() => {
-    const init = async () => {
-      await fetchCompanies();
-      await fetchTeams();
-      await fetchUsers();
-    };
-    init();
+    fetchTeams();
+    fetchUsers();
+    fetchCompanies();
   }, []);
-
-  // Refresh teams when companies change
-  useEffect(() => {
-    if (teams.length && allCompanies.length) {
-      setTeams(prev => computeTeamCounts(prev, allCompanies));
-    }
-  }, [allCompanies]);
 
   const handleCreateTeam = async () => {
     if (!teamForm.name) return toast.error('Team name is required');
@@ -132,8 +108,6 @@ const AdminTeamManagement = () => {
     try {
       await api.delete(`/admin/teams/${teamId}`);
       toast.success('Team deleted');
-      // Remove team reference from local companies
-      setAllCompanies(prev => prev.map(c => c.team === teamId ? { ...c, team: null } : c));
       await fetchTeams();
     } catch (err) {
       toast.error('Failed to delete team');
@@ -161,24 +135,8 @@ const AdminTeamManagement = () => {
     try {
       await api.post(`/admin/teams/${selectedTeam._id}/assign-company`, { companyId: selectedCompanyId });
       toast.success('Company assigned to team');
-
-      // Refresh companies (will get updated team field)
-      const freshCompanies = await fetchCompanies();
-
-      // Refresh assigned companies for this team
-      const res = await api.get(`/admin/teams/${selectedTeam._id}/companies`);
-      const assigned = res.data.data || [];
-      setTeamCompanies(assigned);
-
-      // Update available companies (exclude newly assigned)
-      const assignedIds = assigned.map(c => c._id);
-      const newAvailable = freshCompanies.filter(c => !assignedIds.includes(c._id));
-      setAvailableCompanies(newAvailable);
-
-      // Refresh teams to update the count in the main table
-      await fetchTeams();
-
-      setSelectedCompanyId('');
+      // Force a full page reload to ensure everything is fresh
+      window.location.reload();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Assignment failed');
     } finally {
@@ -191,16 +149,7 @@ const AdminTeamManagement = () => {
     try {
       await api.delete(`/admin/teams/${selectedTeam._id}/companies/${companyId}`);
       toast.success('Company removed from team');
-
-      // Refresh data
-      const freshCompanies = await fetchCompanies();
-      const res = await api.get(`/admin/teams/${selectedTeam._id}/companies`);
-      const assigned = res.data.data || [];
-      setTeamCompanies(assigned);
-      const assignedIds = assigned.map(c => c._id);
-      const newAvailable = freshCompanies.filter(c => !assignedIds.includes(c._id));
-      setAvailableCompanies(newAvailable);
-      await fetchTeams();
+      window.location.reload();
     } catch (err) {
       toast.error('Removal failed');
     }
