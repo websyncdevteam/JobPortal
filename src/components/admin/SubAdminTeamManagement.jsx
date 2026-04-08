@@ -12,14 +12,15 @@ import {
   DialogTitle,
   Grid,
   IconButton,
+  MenuItem,
   Paper,
+  Select,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
   Typography,
 } from '@mui/material';
 import { Add, Delete, PersonAdd } from '@mui/icons-material';
@@ -28,20 +29,18 @@ const SubAdminTeamManagement = () => {
   const [team, setTeam] = useState(null);
   const [members, setMembers] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [unassignedRecruiters, setUnassignedRecruiters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
+  const [selectedRecruiterId, setSelectedRecruiterId] = useState('');
 
-  // Fetch team info and members
   const fetchTeamData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/team/members');
-      setMembers(res.data.members);
-      // Also fetch team details
+      const membersRes = await api.get('/team/members');
+      setMembers(membersRes.data.members);
       const teamRes = await api.get('/team');
       setTeam(teamRes.data.team);
-      // Fetch assigned companies
       const compRes = await api.get('/team/companies');
       setCompanies(compRes.data.data);
     } catch (err) {
@@ -51,18 +50,29 @@ const SubAdminTeamManagement = () => {
     }
   };
 
+  const fetchUnassignedRecruiters = async () => {
+    try {
+      const res = await api.get('/team/recruiters/unassigned');
+      setUnassignedRecruiters(res.data.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchTeamData();
+    fetchUnassignedRecruiters();
   }, []);
 
-  const handleInviteMember = async () => {
-    if (!inviteEmail) return;
+  const handleAddMember = async () => {
+    if (!selectedRecruiterId) return;
     try {
-      await api.post('/team/members', { email: inviteEmail });
+      await api.post('/team/members', { userId: selectedRecruiterId });
       toast.success('Recruiter added to team');
+      setSelectedRecruiterId('');
       setInviteOpen(false);
-      setInviteEmail('');
       fetchTeamData();
+      fetchUnassignedRecruiters();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to add member');
     }
@@ -74,6 +84,7 @@ const SubAdminTeamManagement = () => {
       await api.delete(`/team/members/${userId}`);
       toast.success('Member removed');
       fetchTeamData();
+      fetchUnassignedRecruiters();
     } catch (err) {
       toast.error('Removal failed');
     }
@@ -156,25 +167,35 @@ const SubAdminTeamManagement = () => {
         </Grid>
       </Grid>
 
-      {/* Invite Dialog */}
-      <Dialog open={inviteOpen} onClose={() => setInviteOpen(false)}>
+      {/* Add Member Dialog */}
+      <Dialog open={inviteOpen} onClose={() => setInviteOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Add Recruiter to Team</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Recruiter Email"
-            type="email"
+          <Select
             fullWidth
-            variant="outlined"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            helperText="The user must already exist with role 'recruiter'."
-          />
+            margin="dense"
+            value={selectedRecruiterId}
+            onChange={(e) => setSelectedRecruiterId(e.target.value)}
+            displayEmpty
+          >
+            <MenuItem value="">Select a recruiter (unassigned)</MenuItem>
+            {unassignedRecruiters.map(recruiter => (
+              <MenuItem key={recruiter._id} value={recruiter._id}>
+                {recruiter.fullname} ({recruiter.email})
+              </MenuItem>
+            ))}
+          </Select>
+          {unassignedRecruiters.length === 0 && (
+            <Typography variant="caption" color="text.secondary">
+              No unassigned recruiters available.
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setInviteOpen(false)}>Cancel</Button>
-          <Button onClick={handleInviteMember} variant="contained">Add</Button>
+          <Button onClick={handleAddMember} variant="contained" disabled={!selectedRecruiterId}>
+            Add
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
