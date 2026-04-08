@@ -38,22 +38,11 @@ const AdminTeamManagement = () => {
   const [teamCompanies, setTeamCompanies] = useState([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
 
-  // Helper to compute team company counts
-  const computeTeamCounts = (teamsData, companies) => {
-    return teamsData.map(team => ({
-      ...team,
-      memberCount: team.memberCount ?? 0,
-      companyCount: companies.filter(c => c.team === team._id).length,
-    }));
-  };
-
   const fetchTeams = async () => {
     try {
       setLoading(true);
       const res = await api.get('/admin/teams');
-      const teamsData = res.data.data || [];
-      const teamsWithCounts = computeTeamCounts(teamsData, allCompanies);
-      setTeams(teamsWithCounts);
+      setTeams(res.data.data || []);
     } catch (err) {
       toast.error('Failed to load teams');
     } finally {
@@ -79,28 +68,16 @@ const AdminTeamManagement = () => {
       else if (res.data.data) comps = res.data.data;
       else if (Array.isArray(res.data)) comps = res.data;
       setAllCompanies(comps);
-      return comps;
     } catch (err) {
       toast.error('Could not load companies');
-      return [];
     }
   };
 
   useEffect(() => {
-    const init = async () => {
-      await fetchCompanies();
-      await fetchTeams();
-      await fetchUsers();
-    };
-    init();
+    fetchTeams();
+    fetchUsers();
+    fetchCompanies();
   }, []);
-
-  // Recompute team counts when companies change
-  useEffect(() => {
-    if (teams.length && allCompanies.length) {
-      setTeams(prev => computeTeamCounts(prev, allCompanies));
-    }
-  }, [allCompanies]);
 
   const handleCreateTeam = async () => {
     if (!teamForm.name) return toast.error('Team name is required');
@@ -131,7 +108,6 @@ const AdminTeamManagement = () => {
     try {
       await api.delete(`/admin/teams/${teamId}`);
       toast.success('Team deleted');
-      await fetchCompanies();
       await fetchTeams();
     } catch (err) {
       toast.error('Failed to delete team');
@@ -144,7 +120,6 @@ const AdminTeamManagement = () => {
       const res = await api.get(`/admin/teams/${team._id}/companies`);
       const assigned = res.data.data || [];
       setTeamCompanies(assigned);
-      // 🔥 Only show companies that are NOT assigned to ANY team (team === null)
       const unassigned = allCompanies.filter(c => !c.team);
       setAvailableCompanies(unassigned);
       setSelectedCompanyId('');
@@ -159,17 +134,14 @@ const AdminTeamManagement = () => {
     try {
       await api.post(`/admin/teams/${selectedTeam._id}/assign-company`, { companyId: selectedCompanyId });
       toast.success('Company assigned to team');
-
       // Refresh all data
-      const freshCompanies = await fetchCompanies();
+      await fetchCompanies();
       await fetchTeams();
-
-      // Update assigned list for this team
+      // Refresh the dialog's assigned list and available dropdown
       const res = await api.get(`/admin/teams/${selectedTeam._id}/companies`);
       setTeamCompanies(res.data.data || []);
-
-      // Update available dropdown (only unassigned companies)
-      setAvailableCompanies(freshCompanies.filter(c => !c.team));
+      const freshUnassigned = allCompanies.filter(c => !c.team);
+      setAvailableCompanies(freshUnassigned);
       setSelectedCompanyId('');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Assignment failed');
@@ -183,15 +155,12 @@ const AdminTeamManagement = () => {
     try {
       await api.delete(`/admin/teams/${selectedTeam._id}/companies/${companyId}`);
       toast.success('Company removed from team');
-
-      const freshCompanies = await fetchCompanies();
+      await fetchCompanies();
       await fetchTeams();
-
       const res = await api.get(`/admin/teams/${selectedTeam._id}/companies`);
       setTeamCompanies(res.data.data || []);
-
-      // After removal, company becomes unassigned, so it reappears in available list
-      setAvailableCompanies(freshCompanies.filter(c => !c.team));
+      const freshUnassigned = allCompanies.filter(c => !c.team);
+      setAvailableCompanies(freshUnassigned);
     } catch (err) {
       toast.error('Removal failed');
     }
@@ -201,9 +170,14 @@ const AdminTeamManagement = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h4">Team Management</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={() => setDialogOpen(true)}>
-          New Team
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button variant="outlined" onClick={fetchTeams}>
+            Refresh
+          </Button>
+          <Button variant="contained" startIcon={<Add />} onClick={() => setDialogOpen(true)}>
+            New Team
+          </Button>
+        </Box>
       </Box>
 
       <TableContainer component={Paper}>
@@ -260,7 +234,7 @@ const AdminTeamManagement = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Team Details Dialog (Assign/Remove Companies) */}
+      {/* Team Details Dialog */}
       <Dialog open={!!selectedTeam} onClose={() => setSelectedTeam(null)} maxWidth="md" fullWidth>
         <DialogTitle>Team: {selectedTeam?.name}</DialogTitle>
         <DialogContent>
