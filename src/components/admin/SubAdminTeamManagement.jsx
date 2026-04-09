@@ -23,7 +23,7 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import { Add, Delete, PersonAdd } from '@mui/icons-material';
+import { Delete, PersonAdd } from '@mui/icons-material';
 
 const SubAdminTeamManagement = () => {
   const [team, setTeam] = useState(null);
