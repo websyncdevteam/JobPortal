@@ -21,6 +21,8 @@ import {
   TextField,
   Typography,
   CircularProgress,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { Add, Delete, Edit, Visibility } from '@mui/icons-material';
 
@@ -36,7 +38,11 @@ const AdminTeamManagement = () => {
   const [teamForm, setTeamForm] = useState({ name: '', description: '', subAdminId: '' });
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [teamCompanies, setTeamCompanies] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamJobs, setTeamJobs] = useState([]);
+  const [teamActivity, setTeamActivity] = useState([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [activeTab, setActiveTab] = useState(0);
 
   const fetchTeams = async () => {
     try {
@@ -116,15 +122,30 @@ const AdminTeamManagement = () => {
 
   const viewTeamDetails = async (team) => {
     setSelectedTeam(team);
+    setActiveTab(0);
     try {
-      const res = await api.get(`/admin/teams/${team._id}/companies`);
-      const assigned = res.data.data || [];
-      setTeamCompanies(assigned);
-      const unassigned = allCompanies.filter(c => !c.team);
-      setAvailableCompanies(unassigned);
+      // Fetch assigned companies
+      const companiesRes = await api.get(`/admin/teams/${team._id}/companies`);
+      setTeamCompanies(companiesRes.data.data || []);
+      // Fetch members
+      const membersRes = await api.get(`/admin/teams/${team._id}/members`);
+      setTeamMembers(membersRes.data.members || []);
+      // Fetch jobs (optional, requires backend endpoint – see note)
+      try {
+        const jobsRes = await api.get(`/admin/teams/${team._id}/jobs`);
+        setTeamJobs(jobsRes.data.jobs || []);
+      } catch (err) { /* jobs endpoint may not exist yet */ }
+      // Fetch activity
+      const activityRes = await api.get(`/admin/teams/${team._id}/activity`);
+      setTeamActivity(activityRes.data.data || []);
+
+      // Compute available companies (only unassigned ones)
+      const assignedIds = (companiesRes.data.data || []).map(c => c._id);
+      const available = allCompanies.filter(c => !assignedIds.includes(c._id));
+      setAvailableCompanies(available);
       setSelectedCompanyId('');
     } catch (err) {
-      toast.error('Failed to load team companies');
+      toast.error('Failed to load team details');
     }
   };
 
@@ -134,15 +155,8 @@ const AdminTeamManagement = () => {
     try {
       await api.post(`/admin/teams/${selectedTeam._id}/assign-company`, { companyId: selectedCompanyId });
       toast.success('Company assigned to team');
-      // Refresh all data
-      await fetchCompanies();
-      await fetchTeams();
-      // Refresh the dialog's assigned list and available dropdown
-      const res = await api.get(`/admin/teams/${selectedTeam._id}/companies`);
-      setTeamCompanies(res.data.data || []);
-      const freshUnassigned = allCompanies.filter(c => !c.team);
-      setAvailableCompanies(freshUnassigned);
-      setSelectedCompanyId('');
+      await viewTeamDetails(selectedTeam); // refresh all data
+      await fetchTeams(); // update main table counts
     } catch (err) {
       toast.error(err.response?.data?.message || 'Assignment failed');
     } finally {
@@ -155,12 +169,8 @@ const AdminTeamManagement = () => {
     try {
       await api.delete(`/admin/teams/${selectedTeam._id}/companies/${companyId}`);
       toast.success('Company removed from team');
-      await fetchCompanies();
+      await viewTeamDetails(selectedTeam);
       await fetchTeams();
-      const res = await api.get(`/admin/teams/${selectedTeam._id}/companies`);
-      setTeamCompanies(res.data.data || []);
-      const freshUnassigned = allCompanies.filter(c => !c.team);
-      setAvailableCompanies(freshUnassigned);
     } catch (err) {
       toast.error('Removal failed');
     }
@@ -171,9 +181,7 @@ const AdminTeamManagement = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h4">Team Management</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="outlined" onClick={fetchTeams}>
-            Refresh
-          </Button>
+          <Button variant="outlined" onClick={fetchTeams}>Refresh</Button>
           <Button variant="contained" startIcon={<Add />} onClick={() => setDialogOpen(true)}>
             New Team
           </Button>
@@ -234,50 +242,117 @@ const AdminTeamManagement = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Team Details Dialog */}
-      <Dialog open={!!selectedTeam} onClose={() => setSelectedTeam(null)} maxWidth="md" fullWidth>
+      {/* Team Details Dialog with Tabs */}
+      <Dialog open={!!selectedTeam} onClose={() => setSelectedTeam(null)} maxWidth="lg" fullWidth>
         <DialogTitle>Team: {selectedTeam?.name}</DialogTitle>
         <DialogContent>
-          <Typography variant="h6" gutterBottom>Assigned Companies</Typography>
-          <TableContainer component={Paper} sx={{ mb: 2 }}>
-            <Table size="small">
-              <TableHead><TableRow><TableCell>Company Name</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>
-              <TableBody>
-                {teamCompanies.length === 0 ? (
-                  <TableRow><TableCell colSpan={2} align="center">No companies assigned</TableCell></TableRow>
-                ) : (
-                  teamCompanies.map(company => (
-                    <TableRow key={company._id}>
-                      <TableCell>{company.name}</TableCell>
-                      <TableCell><IconButton onClick={() => handleRemoveCompany(company._id)}><Delete /></IconButton></TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ mb: 2 }}>
+            <Tab label="Companies" />
+            <Tab label="Members" />
+            <Tab label="Jobs" />
+            <Tab label="Activity" />
+          </Tabs>
 
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Select
-              size="small"
-              value={selectedCompanyId}
-              onChange={(e) => setSelectedCompanyId(e.target.value)}
-              displayEmpty
-              sx={{ minWidth: 200 }}
-            >
-              <MenuItem value="">Select a company</MenuItem>
-              {availableCompanies.length === 0 ? (
-                <MenuItem disabled>No companies available</MenuItem>
-              ) : (
-                availableCompanies.map(company => (
-                  <MenuItem key={company._id} value={company._id}>{company.name}</MenuItem>
-                ))
-              )}
-            </Select>
-            <Button variant="outlined" onClick={handleAssignCompany} disabled={assigning || !selectedCompanyId}>
-              {assigning ? <CircularProgress size={24} /> : 'Assign Company'}
-            </Button>
-          </Box>
+          {activeTab === 0 && (
+            <>
+              <Typography variant="h6" gutterBottom>Assigned Companies</Typography>
+              <TableContainer component={Paper} sx={{ mb: 2 }}>
+                <Table size="small">
+                  <TableHead><TableRow><TableCell>Company Name</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>
+                  <TableBody>
+                    {teamCompanies.map(company => (
+                      <TableRow key={company._id}>
+                        <TableCell>{company.name}</TableCell>
+                        <TableCell><IconButton onClick={() => handleRemoveCompany(company._id)}><Delete /></IconButton></TableCell>
+                      </TableRow>
+                    ))}
+                    {teamCompanies.length === 0 && <TableRow><TableCell colSpan={2}>No companies assigned</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Select size="small" value={selectedCompanyId} onChange={(e) => setSelectedCompanyId(e.target.value)} displayEmpty sx={{ minWidth: 200 }}>
+                  <MenuItem value="">Select a company</MenuItem>
+                  {availableCompanies.map(company => (<MenuItem key={company._id} value={company._id}>{company.name}</MenuItem>))}
+                </Select>
+                <Button variant="outlined" onClick={handleAssignCompany} disabled={assigning || !selectedCompanyId}>
+                  {assigning ? <CircularProgress size={24} /> : 'Assign Company'}
+                </Button>
+              </Box>
+            </>
+          )}
+
+          {activeTab === 1 && (
+            <>
+              <Typography variant="h6" gutterBottom>Team Members</Typography>
+              <TableContainer component={Paper}>
+                <Table size="small">
+                  <TableHead><TableRow><TableCell>Name</TableCell><TableCell>Email</TableCell><TableCell>Role</TableCell></TableRow></TableHead>
+                  <TableBody>
+                    {teamMembers.map(member => (
+                      <TableRow key={member._id}>
+                        <TableCell>{member.fullname}</TableCell>
+                        <TableCell>{member.email}</TableCell>
+                        <TableCell>{member.role}</TableCell>
+                      </TableRow>
+                    ))}
+                    {teamMembers.length === 0 && <TableRow><TableCell colSpan={3}>No members</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
+
+          {activeTab === 2 && (
+            <>
+              <Typography variant="h6" gutterBottom>Jobs Posted</Typography>
+              <TableContainer component={Paper}>
+                <Table size="small">
+                  <TableHead><TableRow><TableCell>Job Title</TableCell><TableCell>Company</TableCell><TableCell>Status</TableCell><TableCell>Applications</TableCell></TableRow></TableHead>
+                  <TableBody>
+                    {teamJobs.map(job => (
+                      <TableRow key={job._id}>
+                        <TableCell>{job.title}</TableCell>
+                        <TableCell>{job.company?.name}</TableCell>
+                        <TableCell>{job.status}</TableCell>
+                        <TableCell>{job.applications?.length || 0}</TableCell>
+                      </TableRow>
+                    ))}
+                    {teamJobs.length === 0 && <TableRow><TableCell colSpan={4}>No jobs posted</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
+
+          {activeTab === 3 && (
+            <>
+              <Typography variant="h6" gutterBottom>Activity Log</Typography>
+              <TableContainer component={Paper}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>User</TableCell>
+                      <TableCell>Action</TableCell>
+                      <TableCell>Details</TableCell>
+                      <TableCell>Time</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {teamActivity.map(act => (
+                      <TableRow key={act._id}>
+                        <TableCell>{act.user?.fullname || 'Unknown'}</TableCell>
+                        <TableCell>{act.type?.replace(/_/g, ' ')}</TableCell>
+                        <TableCell>{act.message}</TableCell>
+                        <TableCell>{new Date(act.createdAt).toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                    {teamActivity.length === 0 && <TableRow><TableCell colSpan={4}>No activity yet</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSelectedTeam(null)}>Close</Button>
