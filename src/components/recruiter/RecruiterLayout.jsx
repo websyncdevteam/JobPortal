@@ -15,7 +15,8 @@ import {
   Settings,
   Bell,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  UsersRound   // <-- added for "My Team"
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
@@ -35,7 +36,8 @@ const RecruiterLayout = () => {
     navigate('/login');
   };
 
-  const navigation = [
+  // Base navigation items
+  const baseNavigation = [
     { name: 'Dashboard', href: '/recruiter', icon: Home, exact: true },
     { name: 'Job Management', href: '/recruiter/jobs', icon: Briefcase },
     { name: 'Candidates', href: '/recruiter/candidates', icon: Users },
@@ -43,6 +45,12 @@ const RecruiterLayout = () => {
     { name: 'Analytics', href: '/recruiter/analytics', icon: BarChart3 },
     { name: 'Settings', href: '/recruiter/settings', icon: Settings },
   ];
+
+  // Add "My Team" only if the recruiter is a sub‑admin (isTeamAdmin)
+  const navigation = [...baseNavigation];
+  if (user?.isTeamAdmin) {
+    navigation.push({ name: 'My Team', href: '/recruiter/my-team', icon: UsersRound });
+  }
 
   // Check if current route is active
   const isActive = (path, exact = false) => {
@@ -207,7 +215,7 @@ const RecruiterLayout = () => {
         </div>
       </aside>
 
-      {/* Main content wrapper - This is the key fix */}
+      {/* Main content wrapper */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
@@ -231,6 +239,7 @@ const RecruiterLayout = () => {
                   {location.pathname === '/recruiter/interviews' && 'Schedule and manage interviews'}
                   {location.pathname === '/recruiter/analytics' && 'Recruitment analytics and insights'}
                   {location.pathname === '/recruiter/settings' && 'Account and application settings'}
+                  {location.pathname === '/recruiter/my-team' && 'Manage your team members'}
                 </p>
               </div>
               
