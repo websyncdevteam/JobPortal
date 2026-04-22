@@ -100,12 +100,12 @@ const PostJob = () => {
       if (user?.role !== "admin") {
         url = "/team/companies";
       }
-      console.log("Fetching companies from URL:", url);
+      console.log("Fetching from:", url);
       const res = await api.get(url);
-      console.log("API Response:", res.data);
+      console.log("API response:", res.data);
       if (res.data.success) {
-        console.log("Companies received:", res.data.data);
         setCompanies(res.data.data);
+        console.log("Companies set to:", res.data.data);
       } else {
         if (res.data.message === "No companies found.") {
           setCompanies([]);
@@ -114,7 +114,7 @@ const PostJob = () => {
         }
       }
     } catch (err) {
-      console.error("Error fetching companies:", err);
+      console.error(err);
       if (err.response?.status === 404 && err.response?.data?.message === "No team found") {
         setCompanies([]);
       } else if (err.response?.status === 404 && err.response?.data?.message === "No companies found.") {
@@ -128,6 +128,11 @@ const PostJob = () => {
   useEffect(() => {
     fetchCompanies();
   }, [user]);
+
+  // Force re-render when companies change
+  useEffect(() => {
+    console.log("Companies state changed:", companies.length);
+  }, [companies]);
 
   const handleChange = (e) => {
     if (e.target.name === "skillsInput") {
@@ -228,6 +233,7 @@ const PostJob = () => {
                         <InputLabel id="company-label">Select Company</InputLabel>
                         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                           <Select
+                            key={companies.length} // force re-render when length changes
                             name="companyId"
                             labelId="company-label"
                             label="Select Company"
@@ -257,6 +263,7 @@ const PostJob = () => {
                       </FormControl>
                     </Grid>
 
+                    {/* ... rest of the form unchanged (same as your original) ... */}
                     <Grid item xs={12}>
                       <TextField
                         name="description"
