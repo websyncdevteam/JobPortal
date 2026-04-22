@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
-import api from "../../services/api"; // ✅ use shared axios instance
+import api from "../../services/api";
 import {
   Box,
   Grid,
@@ -33,81 +33,36 @@ import {
 import { toast } from "sonner";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 
-// Create a custom theme with black and orange
 const theme = createTheme({
   palette: {
-    primary: {
-      main: "#000000",
-      light: "#333333",
-      dark: "#000000",
-    },
-    secondary: {
-      main: "#FF8C00",
-      light: "#FFA733",
-      dark: "#CC7000",
-    },
-    background: {
-      default: "#F5F5F5",
-      paper: "#FFFFFF",
-    },
-    text: {
-      primary: "#000000",
-      secondary: "#666666",
-    },
+    primary: { main: "#000000", light: "#333333", dark: "#000000" },
+    secondary: { main: "#FF8C00", light: "#FFA733", dark: "#CC7000" },
+    background: { default: "#F5F5F5", paper: "#FFFFFF" },
+    text: { primary: "#000000", secondary: "#666666" },
   },
-  typography: {
-    fontFamily: "'Inter', 'Roboto', sans-serif",
-    h4: {
-      fontWeight: 700,
-      color: "#000000",
-    },
-    h5: {
-      fontWeight: 600,
-      color: "#000000",
-    },
-    h6: {
-      color: "#666666",
-    },
-    body1: {
-      color: "#333333",
-    },
-  },
-  shape: {
-    borderRadius: 8,
-  },
+  typography: { fontFamily: "'Inter', 'Roboto', sans-serif" },
+  shape: { borderRadius: 8 },
   components: {
     MuiTextField: {
       styleOverrides: {
         root: {
-          "& .MuiOutlinedInput-root": {
-            borderRadius: 6,
-            backgroundColor: "#FFFFFF",
-          },
+          "& .MuiOutlinedInput-root": { borderRadius: 6, backgroundColor: "#FFFFFF" },
         },
       },
     },
     MuiButton: {
       styleOverrides: {
-        root: {
-          borderRadius: 6,
-          textTransform: "none",
-          fontWeight: 600,
-        },
+        root: { borderRadius: 6, textTransform: "none", fontWeight: 600 },
       },
     },
     MuiPaper: {
       styleOverrides: {
-        root: {
-          boxShadow: "0 2px 12px rgba(0, 0, 0, 0.08)",
-          border: "1px solid #E0E0E0",
-        },
+        root: { boxShadow: "0 2px 12px rgba(0, 0, 0, 0.08)", border: "1px solid #E0E0E0" },
       },
     },
     MuiSelect: {
       styleOverrides: {
-        root: {
-          borderRadius: 6,
-        },
+        root: { borderRadius: 6 },
       },
     },
   },
@@ -131,55 +86,46 @@ const PostJob = () => {
   });
 
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const jobTypes = ["Full-time", "Part-time", "Contract", "Freelance", "Internship"];
 
-  const jobTypes = [
-    "Full-time",
-    "Part-time",
-    "Contract",
-    "Freelance",
-    "Internship",
-  ];
+  // Define fetchCompanies outside useEffect so it can be called manually
+  const fetchCompanies = async () => {
+    try {
+      const token = user?.token || localStorage.getItem("authToken");
+      if (!token) {
+        toast.error("You are not authorized to fetch companies.");
+        return;
+      }
 
-  useEffect(() => {
-    const fetchCompanies = async () => {
-      try {
-        const token = user?.token || localStorage.getItem("authToken");
-        if (!token) {
-          toast.error("You are not authorized to fetch companies.");
-          return;
-        }
+      let url = "/admin/companies"; // default for admin
+      if (user?.role !== "admin") {
+        url = "/team/companies"; // recruiter → only team companies
+      }
 
-        // 🔥 Different endpoint for admin vs. recruiter (team)
-        let url = "/admin/companies";   // default for admin
-        if (user?.role !== "admin") {
-          url = "/team/companies";      // recruiter (sub-admin) → only team companies
-        }
+      const res = await api.get(url);
 
-        const res = await api.get(url);
-
-        if (res.data.success) {
-          setCompanies(res.data.data);
-        } else {
-          // If success false but message is "No companies found.", treat as empty list
-          if (res.data.message === "No companies found.") {
-            setCompanies([]);
-          } else {
-            toast.error("Failed to fetch companies");
-          }
-        }
-      } catch (err) {
-        // For recruiters with no team, the backend returns 404 with a message
-        if (err.response?.status === 404 && err.response?.data?.message === "No team found") {
-          setCompanies([]); // No team → no companies
-        } else if (err.response?.status === 404 && err.response?.data?.message === "No companies found.") {
+      if (res.data.success) {
+        setCompanies(res.data.data);
+      } else {
+        if (res.data.message === "No companies found.") {
           setCompanies([]);
         } else {
-          console.error(err);
-          toast.error("Error fetching companies. Check console.");
+          toast.error("Failed to fetch companies");
         }
       }
-    };
+    } catch (err) {
+      if (err.response?.status === 404 && err.response?.data?.message === "No team found") {
+        setCompanies([]);
+      } else if (err.response?.status === 404 && err.response?.data?.message === "No companies found.") {
+        setCompanies([]);
+      } else {
+        console.error(err);
+        toast.error("Error fetching companies. Check console.");
+      }
+    }
+  };
 
+  useEffect(() => {
     fetchCompanies();
   }, [user]);
 
@@ -236,7 +182,6 @@ const PostJob = () => {
       };
 
       const endpoint = user?.role === "admin" ? "/admin/jobs" : "/recruiter/jobs";
-
       const res = await api.post(endpoint, payload);
 
       if (res.data.success) {
@@ -253,60 +198,23 @@ const PostJob = () => {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ 
-        background: "#F5F5F5", 
-        minHeight: "100vh", 
-        py: isMobile ? 2 : 4,
-        px: isMobile ? 1 : 2
-      }}>
+      <Box sx={{ background: "#F5F5F5", minHeight: "100vh", py: isMobile ? 2 : 4, px: isMobile ? 1 : 2 }}>
         <Fade in={true} timeout={800}>
-          <Box sx={{ 
-            maxWidth: 1000, 
-            margin: "0 auto",
-            px: isMobile ? 1 : 3
-          }}>
-            {/* Header with back button */}
+          <Box sx={{ maxWidth: 1000, margin: "0 auto", px: isMobile ? 1 : 3 }}>
             <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-              <IconButton 
-                onClick={() => navigate(-1)}
-                sx={{ 
-                  color: "primary.main", 
-                  mr: 2,
-                  backgroundColor: "rgba(0, 0, 0, 0.05)",
-                  "&:hover": {
-                    backgroundColor: "rgba(0, 0, 0, 0.1)",
-                  }
-                }}
-              >
+              <IconButton onClick={() => navigate(-1)} sx={{ color: "primary.main", mr: 2, backgroundColor: "rgba(0, 0, 0, 0.05)", "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.1)" } }}>
                 <ArrowBack />
               </IconButton>
-              <Typography variant="h4" fontWeight={700}>
-                Post a New Job
-              </Typography>
+              <Typography variant="h4" fontWeight={700}>Post a New Job</Typography>
             </Box>
-
-            <Paper sx={{ 
-              borderRadius: 2, 
-              overflow: "hidden",
-            }}>
-              <Box sx={{ 
-                background: "secondary.main", 
-                color: "white", 
-                py: 2, 
-                px: 4,
-                display: "flex",
-                alignItems: "center"
-              }}>
+            <Paper sx={{ borderRadius: 2, overflow: "hidden" }}>
+              <Box sx={{ background: "secondary.main", color: "white", py: 2, px: 4, display: "flex", alignItems: "center" }}>
                 <WorkOutline sx={{ mr: 1, fontSize: "28px" }} />
-                <Typography variant="h5" fontWeight={600}>
-                  Job Details
-                </Typography>
+                <Typography variant="h5" fontWeight={600}>Job Details</Typography>
               </Box>
-
               <Box sx={{ p: isMobile ? 2 : 4 }}>
                 <form onSubmit={handleSubmit}>
                   <Grid container spacing={3}>
-                    {/* Job Title & Company */}
                     <Grid item xs={12} md={6}>
                       <TextField
                         name="title"
@@ -316,39 +224,41 @@ const PostJob = () => {
                         onChange={handleChange}
                         required
                         variant="outlined"
-                        InputProps={{
-                          startAdornment: (
-                            <WorkOutline sx={{ mr: 1, opacity: 0.7, color: "text.secondary" }} />
-                          ),
-                        }}
+                        InputProps={{ startAdornment: <WorkOutline sx={{ mr: 1, opacity: 0.7, color: "text.secondary" }} /> }}
                       />
                     </Grid>
 
                     <Grid item xs={12} md={6}>
                       <FormControl fullWidth>
                         <InputLabel id="company-label">Select Company</InputLabel>
-                        <Select
-                          name="companyId"
-                          labelId="company-label"
-                          label="Select Company"
-                          value={form.companyId}
-                          onChange={handleChange}
-                          required
-                          variant="outlined"
-                          startAdornment={
-                            <Business sx={{ mr: 1, opacity: 0.7, color: "text.secondary" }} />
-                          }
-                        >
-                          {companies.map((c) => (
-                            <MenuItem key={c._id} value={c._id}>
-                              {c.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
+                        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                          <Select
+                            name="companyId"
+                            labelId="company-label"
+                            label="Select Company"
+                            value={form.companyId}
+                            onChange={handleChange}
+                            required
+                            variant="outlined"
+                            sx={{ flex: 1 }}
+                          >
+                            {companies.map((c) => (
+                              <MenuItem key={c._id} value={c._id}>{c.name}</MenuItem>
+                            ))}
+                          </Select>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={fetchCompanies}
+                            title="Refresh company list"
+                            sx={{ minWidth: "auto", px: 2 }}
+                          >
+                            ↻
+                          </Button>
+                        </Box>
                       </FormControl>
                     </Grid>
 
-                    {/* Description */}
                     <Grid item xs={12}>
                       <TextField
                         name="description"
@@ -360,15 +270,10 @@ const PostJob = () => {
                         onChange={handleChange}
                         required
                         variant="outlined"
-                        InputProps={{
-                          startAdornment: (
-                            <Description sx={{ mr: 1, opacity: 0.7, color: "text.secondary", alignSelf: "flex-start", mt: 1 }} />
-                          ),
-                        }}
+                        InputProps={{ startAdornment: <Description sx={{ mr: 1, opacity: 0.7, color: "text.secondary", alignSelf: "flex-start", mt: 1 }} /> }}
                       />
                     </Grid>
 
-                    {/* Location & Job Type */}
                     <Grid item xs={12} md={6}>
                       <TextField
                         name="location"
@@ -377,11 +282,7 @@ const PostJob = () => {
                         value={form.location}
                         onChange={handleChange}
                         variant="outlined"
-                        InputProps={{
-                          startAdornment: (
-                            <LocationOn sx={{ mr: 1, opacity: 0.7, color: "text.secondary" }} />
-                          ),
-                        }}
+                        InputProps={{ startAdornment: <LocationOn sx={{ mr: 1, opacity: 0.7, color: "text.secondary" }} /> }}
                       />
                     </Grid>
 
@@ -397,15 +298,12 @@ const PostJob = () => {
                           variant="outlined"
                         >
                           {jobTypes.map((type) => (
-                            <MenuItem key={type} value={type}>
-                              {type}
-                            </MenuItem>
+                            <MenuItem key={type} value={type}>{type}</MenuItem>
                           ))}
                         </Select>
                       </FormControl>
                     </Grid>
 
-                    {/* Skills */}
                     <Grid item xs={12} md={6}>
                       <TextField
                         name="skillsInput"
@@ -416,39 +314,17 @@ const PostJob = () => {
                         onKeyPress={handleKeyPress}
                         variant="outlined"
                         InputProps={{
-                          startAdornment: (
-                            <Code sx={{ mr: 1, opacity: 0.7, color: "text.secondary" }} />
-                          ),
-                          endAdornment: (
-                            <Button 
-                              onClick={addSkill}
-                              sx={{ 
-                                color: "secondary.main",
-                                fontSize: "12px",
-                                minWidth: "auto",
-                                fontWeight: 600
-                              }}
-                            >
-                              Add
-                            </Button>
-                          )
+                          startAdornment: <Code sx={{ mr: 1, opacity: 0.7, color: "text.secondary" }} />,
+                          endAdornment: <Button onClick={addSkill} sx={{ color: "secondary.main", fontSize: "12px", minWidth: "auto", fontWeight: 600 }}>Add</Button>
                         }}
                       />
                       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2 }}>
                         {skills.map((skill, index) => (
-                          <Chip
-                            key={index}
-                            label={skill}
-                            onDelete={() => removeSkill(skill)}
-                            color="primary"
-                            variant="outlined"
-                            sx={{ borderRadius: 1, backgroundColor: "#F0F0F0" }}
-                          />
+                          <Chip key={index} label={skill} onDelete={() => removeSkill(skill)} color="primary" variant="outlined" sx={{ borderRadius: 1, backgroundColor: "#F0F0F0" }} />
                         ))}
                       </Box>
                     </Grid>
 
-                    {/* Salary & Experience */}
                     <Grid item xs={12} md={6}>
                       <TextField
                         name="salary"
@@ -457,11 +333,7 @@ const PostJob = () => {
                         value={form.salary}
                         onChange={handleChange}
                         variant="outlined"
-                        InputProps={{
-                          startAdornment: (
-                            <AttachMoney sx={{ mr: 1, opacity: 0.7, color: "text.secondary" }} />
-                          ),
-                        }}
+                        InputProps={{ startAdornment: <AttachMoney sx={{ mr: 1, opacity: 0.7, color: "text.secondary" }} /> }}
                       />
                     </Grid>
 
@@ -476,23 +348,13 @@ const PostJob = () => {
                       />
                     </Grid>
 
-                    {/* Submit */}
                     <Grid item xs={12} sx={{ textAlign: "center", mt: 2 }}>
                       <Button
                         type="submit"
                         variant="contained"
                         disabled={loading}
                         startIcon={loading ? <CircularProgress size={20} /> : <TrendingFlat />}
-                        sx={{
-                          px: 6,
-                          py: 1.5,
-                          fontSize: "1rem",
-                          backgroundColor: "secondary.main",
-                          color: "white",
-                          "&:hover": {
-                            backgroundColor: "secondary.dark",
-                          }
-                        }}
+                        sx={{ px: 6, py: 1.5, fontSize: "1rem", backgroundColor: "secondary.main", color: "white", "&:hover": { backgroundColor: "secondary.dark" } }}
                       >
                         {loading ? "Posting Job..." : "Publish Job"}
                       </Button>
