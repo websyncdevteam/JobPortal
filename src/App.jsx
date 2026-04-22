@@ -1,4 +1,4 @@
-// src/App.jsx - UPDATED WITH TEAM MANAGEMENT ROUTES
+// src/App.jsx - UPDATED WITH TEAM MANAGEMENT ROUTES + RECRUITER JOB CREATE
 import React, { useEffect, useState } from "react";
 import {
   createBrowserRouter,
@@ -39,8 +39,8 @@ import AdminJobs from "./components/admin/AdminJobs";
 import PostJob from "./components/admin/PostJob";
 import EditJob from "./components/admin/EditJob";
 import RecruiterManagement from "./components/admin/RecruiterManagement";
-import AdminTeamManagement from "./components/admin/AdminTeamManagement";       // NEW
-import SubAdminTeamManagement from "./components/admin/SubAdminTeamManagement"; // NEW
+import AdminTeamManagement from "./components/admin/AdminTeamManagement";
+import SubAdminTeamManagement from "./components/admin/SubAdminTeamManagement";
 
 // Recruiter
 import RecruiterLayout from "./components/recruiter/RecruiterLayout";
@@ -261,7 +261,6 @@ const router = createBrowserRouter([
       { path: "jobs/:jobId/edit", element: <EditJob /> },
       { path: "jobs/:jobId/applicants", element: <AdminApplicants /> },
       { path: "recruiters", element: <RecruiterManagement /> },
-      // NEW: Team management for admin
       { path: "teams", element: <AdminTeamManagement /> },
     ],
   },
@@ -292,11 +291,11 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardOverview /> },
       { path: "jobs", element: <JobManagement /> },
+      { path: "jobs/create", element: <PostJob /> }, // ✅ ADDED: route for posting a new job
       { path: "candidates", element: <CandidateManagement /> },
       { path: "interviews", element: <InterviewScheduling /> },
       { path: "analytics", element: <AnalyticsRecruiter /> },
       { path: "settings", element: <Settings /> },
-      // NEW: Sub-admin team management (only visible if user.isTeamAdmin)
       { path: "my-team", element: <SubAdminTeamManagement /> },
     ],
   },
