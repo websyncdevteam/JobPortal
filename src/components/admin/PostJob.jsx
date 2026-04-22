@@ -88,7 +88,6 @@ const PostJob = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const jobTypes = ["Full-time", "Part-time", "Contract", "Freelance", "Internship"];
 
-  // Define fetchCompanies outside useEffect so it can be called manually
   const fetchCompanies = async () => {
     try {
       const token = user?.token || localStorage.getItem("authToken");
@@ -97,14 +96,15 @@ const PostJob = () => {
         return;
       }
 
-      let url = "/admin/companies"; // default for admin
+      let url = "/admin/companies";
       if (user?.role !== "admin") {
-        url = "/team/companies"; // recruiter → only team companies
+        url = "/team/companies";
       }
-
+      console.log("Fetching companies from URL:", url);
       const res = await api.get(url);
-
+      console.log("API Response:", res.data);
       if (res.data.success) {
+        console.log("Companies received:", res.data.data);
         setCompanies(res.data.data);
       } else {
         if (res.data.message === "No companies found.") {
@@ -114,12 +114,12 @@ const PostJob = () => {
         }
       }
     } catch (err) {
+      console.error("Error fetching companies:", err);
       if (err.response?.status === 404 && err.response?.data?.message === "No team found") {
         setCompanies([]);
       } else if (err.response?.status === 404 && err.response?.data?.message === "No companies found.") {
         setCompanies([]);
       } else {
-        console.error(err);
         toast.error("Error fetching companies. Check console.");
       }
     }
@@ -157,17 +157,14 @@ const PostJob = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!form.companyId) {
       toast.error("Please select a company");
       return;
     }
-
     if (skills.length === 0) {
       toast.error("Please add at least one skill");
       return;
     }
-
     try {
       setLoading(true);
       const payload = {
@@ -180,10 +177,8 @@ const PostJob = () => {
         experience: form.experience,
         jobType: form.jobType,
       };
-
       const endpoint = user?.role === "admin" ? "/admin/jobs" : "/recruiter/jobs";
       const res = await api.post(endpoint, payload);
-
       if (res.data.success) {
         toast.success(res.data.message || "Job posted successfully");
         navigate(user?.role === "admin" ? "/admin/jobs" : "/recruiter/jobs");
@@ -256,6 +251,9 @@ const PostJob = () => {
                             ↻
                           </Button>
                         </Box>
+                        <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
+                          Companies loaded: {companies.length}
+                        </Typography>
                       </FormControl>
                     </Grid>
 
