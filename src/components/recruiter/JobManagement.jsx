@@ -257,13 +257,13 @@ const JobManagement = () => {
             <Loader className={`mr-2 ${loading.jobs ? 'animate-spin' : ''}`} size={16} />
             Refresh
           </button>
-          <button
-            className="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
-            onClick={() => navigate('/recruiter/jobs/create')}
-          >
-            <Plus size={18} className="mr-2" />
-            Post New Job
-          </button>
+         <button
+  className="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+  onClick={() => navigate('/recruiter/jobs/create')}
+>
+  <Plus size={18} className="mr-2" />
+  Post New Job
+</button>
         </div>
       </div>
 
