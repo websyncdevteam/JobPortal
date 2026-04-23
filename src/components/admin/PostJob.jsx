@@ -95,12 +95,11 @@ const PostJob = () => {
         toast.error("You are not authorized to fetch companies.");
         return;
       }
-
       let url = "/admin/companies";
       if (user?.role !== "admin") {
         url = "/team/companies";
       }
-      console.log("Fetching from:", url);
+      console.log("Fetching companies from:", url);
       const res = await api.get(url);
       console.log("API response:", res.data);
       if (res.data.success) {
@@ -129,7 +128,6 @@ const PostJob = () => {
     fetchCompanies();
   }, [user]);
 
-  // Force re-render when companies change
   useEffect(() => {
     console.log("Companies state changed:", companies.length);
   }, [companies]);
@@ -233,7 +231,7 @@ const PostJob = () => {
                         <InputLabel id="company-label">Select Company</InputLabel>
                         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                           <Select
-                            key={companies.length} // force re-render when length changes
+                            key={companies.length}
                             name="companyId"
                             labelId="company-label"
                             label="Select Company"
@@ -263,7 +261,6 @@ const PostJob = () => {
                       </FormControl>
                     </Grid>
 
-                    {/* ... rest of the form unchanged (same as your original) ... */}
                     <Grid item xs={12}>
                       <TextField
                         name="description"
