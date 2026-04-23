@@ -1,9 +1,11 @@
-// frontend/src/components/recruiter/JobManagement.jsx - FIXED VERSION
+// frontend/src/components/recruiter/JobManagement.jsx - REDIRECT TO DEDICATED JOB POSTING PAGE
 
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Search, Pencil, Trash, Loader, Briefcase, Building, Filter } from "lucide-react";
 import { useRecruiter } from "../../context/RecruiterContext";
-import JobForm from "./JobForm";
+// JobForm is no longer needed – we redirect instead
+// import JobForm from "./JobForm";
 
 const JobCard = ({ job, onEdit, onDelete, onStatusUpdate }) => {
   const getStatusColor = (status) => {
@@ -155,25 +157,22 @@ const DollarSign = ({ size = 16, className = "" }) => (
 );
 
 const JobManagement = () => {
+  const navigate = useNavigate();
   const { 
     jobs, 
     loading, 
     error,
-    fetchRecruiterJobs, // 🔥 FIXED: Use fetchRecruiterJobs instead of fetchRecruiterData
+    fetchRecruiterJobs,
     deleteJob, 
     updateJobStatus,
     clearError,
     stats,
-    hasJobs
   } = useRecruiter();
   
-  const [showForm, setShowForm] = useState(false);
-  const [editingJob, setEditingJob] = useState(null);
   const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("newest");
 
-  // 🔥 FIXED: Use fetchRecruiterJobs instead of fetchRecruiterData
   useEffect(() => {
     fetchRecruiterJobs();
   }, [fetchRecruiterJobs]);
@@ -212,8 +211,8 @@ const JobManagement = () => {
     });
 
   const handleEdit = (job) => {
-    setEditingJob(job);
-    setShowForm(true);
+    // Navigate to edit page (you may need to implement this)
+    navigate(`/recruiter/jobs/edit/${job._id}`);
   };
 
   const handleDelete = async (jobId) => {
@@ -260,10 +259,7 @@ const JobManagement = () => {
           </button>
           <button
             className="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
-            onClick={() => {
-              setEditingJob(null);
-              setShowForm(true);
-            }}
+            onClick={() => navigate('/recruiter/jobs/create')}
           >
             <Plus size={18} className="mr-2" />
             Post New Job
@@ -432,7 +428,7 @@ const JobManagement = () => {
             {!searchTerm && filter === "all" && (
               <button
                 className="flex items-center mx-auto bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-                onClick={() => setShowForm(true)}
+                onClick={() => navigate('/recruiter/jobs/create')}
               >
                 <Plus size={18} className="mr-2" />
                 Post Your First Job
@@ -449,22 +445,11 @@ const JobManagement = () => {
           </div>
         )}
       </div>
-
-      {/* Job Form Modal */}
-      {showForm && (
-        <JobForm
-          job={editingJob}
-          onClose={() => {
-            setShowForm(false);
-            setEditingJob(null);
-          }}
-        />
-      )}
     </div>
   );
 };
 
-// Add missing Users icon
+// Add missing Users and Clock icons
 const Users = ({ size = 16, className = "" }) => (
   <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor">
     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -474,7 +459,6 @@ const Users = ({ size = 16, className = "" }) => (
   </svg>
 );
 
-// Add missing Clock icon
 const Clock = ({ size = 16, className = "" }) => (
   <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor">
     <circle cx="12" cy="12" r="10"/>
@@ -482,4 +466,4 @@ const Clock = ({ size = 16, className = "" }) => (
   </svg>
 );
 
-export default JobManagement; 
+export default JobManagement;
