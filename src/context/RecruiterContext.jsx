@@ -1,4 +1,4 @@
-// frontend/src/context/RecruiterContext.jsx - FINAL ADVANCED VERSION
+// frontend/src/context/RecruiterContext.jsx - FINAL ADVANCED VERSION WITH DASHBOARD FIX
 
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import api from "../services/api";
@@ -20,13 +20,15 @@ export const RecruiterProvider = ({ children }) => {
   const [recruiterCompanies, setRecruiterCompanies] = useState([]);
   const [interviews, setInterviews] = useState([]);
   const [analytics, setAnalytics] = useState(null);
+  const [dashboardStats, setDashboardStats] = useState(null);
   const [loading, setLoading] = useState({
     jobs: false,
     companies: false,
     candidates: false,
     interviews: false,
     analytics: false,
-    general: false
+    general: false,
+    dashboard: false,
   });
   const [error, setError] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
@@ -37,12 +39,12 @@ export const RecruiterProvider = ({ children }) => {
     pendingApplications: 0
   });
 
-  // 🔥 LOADING STATE MANAGEMENT
+  // Loading state management
   const setLoadingState = (key, value) => {
     setLoading(prev => ({ ...prev, [key]: value }));
   };
 
-  // 🔥 ERROR HANDLING
+  // Error handling
   const handleError = (error, defaultMessage) => {
     const errorMessage = error?.response?.data?.message || 
                         error?.response?.data?.error || 
@@ -53,7 +55,7 @@ export const RecruiterProvider = ({ children }) => {
     return errorMessage;
   };
 
-  // 🔥 SUCCESS HANDLING
+  // Success handling
   const handleSuccess = (message, data = null) => {
     setError(null);
     console.log(`✅ ${message}`, data);
@@ -105,7 +107,7 @@ export const RecruiterProvider = ({ children }) => {
         totalJobs: jobsData.length,
         activeJobs,
         totalApplications: jobsData.reduce((sum, job) => sum + (job.applicationCount || 0), 0),
-        pendingApplications: 0 // You can update this when you have application data
+        pendingApplications: 0
       });
       
       return handleSuccess(`Loaded ${jobsData.length} jobs`, jobsData);
@@ -129,7 +131,6 @@ export const RecruiterProvider = ({ children }) => {
         const newJob = response.data.data;
         setJobs(prev => [...prev, newJob]);
         
-        // Update stats
         setStats(prev => ({
           ...prev,
           totalJobs: prev.totalJobs + 1,
@@ -184,7 +185,6 @@ export const RecruiterProvider = ({ children }) => {
       if (response.data?.success) {
         setJobs(prev => prev.filter(job => job._id !== jobId));
         
-        // Update stats
         const deletedJob = jobs.find(job => job._id === jobId);
         if (deletedJob) {
           setStats(prev => ({
@@ -219,7 +219,6 @@ export const RecruiterProvider = ({ children }) => {
         const updatedJob = response.data.data;
         setJobs(prev => prev.map(job => job._id === jobId ? { ...job, status } : job));
         
-        // Update stats
         const oldJob = jobs.find(job => job._id === jobId);
         if (oldJob) {
           setStats(prev => ({
@@ -343,27 +342,41 @@ export const RecruiterProvider = ({ children }) => {
     }
   }, []);
 
-  // ==================== ANALYTICS ====================
+  // ==================== ANALYTICS / DASHBOARD ====================
   const fetchAnalytics = useCallback(async () => {
     try {
       setLoadingState('analytics', true);
+      setLoadingState('dashboard', true);
       console.log("🔄 Fetching analytics...");
       
       const response = await api.get("/recruiter/dashboard/stats");
       
       if (response.data?.success) {
-        setAnalytics(response.data.data);
-        return handleSuccess("Analytics loaded successfully", response.data.data);
+        const analyticsData = response.data.data;
+        const statsData = analyticsData.stats || analyticsData;
+        
+        setDashboardStats({
+          activeJobs: statsData.activeJobs || statsData.totalJobs || 0,
+          totalApplicants: statsData.totalCandidates || statsData.totalApplications || 0,
+          upcomingInterviews: statsData.interviewsScheduled || 0,
+          hiredCandidates: statsData.selectedCandidates || 0,
+        });
+        
+        setAnalytics(analyticsData);
+        return handleSuccess("Analytics loaded successfully", analyticsData);
       } else {
+        setDashboardStats(null);
         setAnalytics(null);
         return handleSuccess("No analytics data available");
       }
     } catch (err) {
       const errorMsg = handleError(err, "Failed to fetch analytics");
+      setDashboardStats(null);
       setAnalytics(null);
       return { success: false, error: errorMsg };
     } finally {
       setLoadingState('analytics', false);
+      setLoadingState('dashboard', false);
     }
   }, []);
 
@@ -401,7 +414,7 @@ export const RecruiterProvider = ({ children }) => {
     interviews,
     recruiterCompanies,
     analytics,
-    stats,
+    stats: dashboardStats, // ⬅️ IMPORTANT: Use dashboardStats for the dashboard
     loading,
     error,
     selectedJob,
