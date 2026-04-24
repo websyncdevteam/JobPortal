@@ -1,13 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Loader, Phone, Mail, FileText, Grid, List, Filter, Download, Plus, X, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Users, Search, Loader, Phone, Mail, FileText, Grid, List, Filter, Download, Plus, X, ChevronRight, ChevronLeft, Send } from 'lucide-react';
 import { useRecruiter } from '../../context/RecruiterContext';
 import PipelineView from './candidates/PipelineView';
 import AdvancedFilters from './AdvancedFilters';
 import BulkActionsUI from './BulkActionsUI';
 import QuickActionsToolbar from './QuickActionsToolbar';
 import ActivityTimelineUI from './ActivityTimelineUI';
+import api from '../../services/api';
+import { toast } from 'sonner';
 
-const CandidateCard = ({ candidate, isSelected, onSelect }) => {
+// Candidate Card Component (updated with Push button)
+const CandidateCard = ({ candidate, isSelected, onSelect, onPush }) => {
+  const [pushing, setPushing] = useState(false);
+
+  const handlePush = async () => {
+    setPushing(true);
+    try {
+      await onPush(candidate._id);
+    } catch (error) {
+      console.error('Push error:', error);
+    } finally {
+      setPushing(false);
+    }
+  };
+
   return (
     <div className={`bg-white rounded-xl shadow-sm p-4 border ${isSelected ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-100'} hover:shadow-md transition-all duration-200`}>
       <div className="flex items-start">
@@ -106,6 +122,19 @@ const CandidateCard = ({ candidate, isSelected, onSelect }) => {
               <span className="ml-1.5 hidden sm:inline">Resume</span>
             </button>
             
+            {/* 🔥 NEW: Push to Company button */}
+            <button 
+              onClick={handlePush}
+              disabled={pushing}
+              className="inline-flex items-center text-indigo-600 hover:text-indigo-800 transition-colors text-sm"
+              title="Push candidate to company"
+            >
+              <div className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 transition-colors">
+                {pushing ? <Loader size={14} className="animate-spin" /> : <Send size={14} />}
+              </div>
+              <span className="ml-1.5 hidden sm:inline">Push to Co.</span>
+            </button>
+            
             <div className="flex-1"></div>
             
             <button className="inline-flex items-center text-gray-500 hover:text-gray-700 transition-colors text-sm">
@@ -155,6 +184,12 @@ const MoreVerticalIcon = ({ size = 16, className = "" }) => (
   </svg>
 );
 
+const ChevronDownIcon = ({ className = '' }) => (
+  <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <path d="M6 9l6 6 6-6"/>
+  </svg>
+);
+
 const CandidateManagement = () => {
   const { jobs, candidates, loading, fetchCandidates } = useRecruiter();
   const [selectedJob, setSelectedJob] = useState('');
@@ -166,6 +201,7 @@ const CandidateManagement = () => {
   const [selectedCandidates, setSelectedCandidates] = useState([]);
   const [advancedFilters, setAdvancedFilters] = useState({});
   const [activityFilters, setActivityFilters] = useState({});
+  const [pushLoading, setPushLoading] = useState(false);
 
   // Set first job as default selected
   useEffect(() => {
@@ -180,6 +216,46 @@ const CandidateManagement = () => {
       fetchCandidates(selectedJob);
     }
   }, [selectedJob]);
+
+  // 🔥 Push a single candidate to company
+  const pushCandidateToCompany = async (applicationId) => {
+    try {
+      const res = await api.post("/recruiter/candidates/push", {
+        applicationIds: [applicationId],
+        notes: "Pushed by recruiter",
+        interviewDate: null
+      });
+      toast.success(res.data.message || "Candidate pushed to company");
+      if (selectedJob) fetchCandidates(selectedJob);
+      return true;
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to push candidate");
+      throw err;
+    }
+  };
+
+  // 🔥 Bulk push selected candidates
+  const pushSelectedToCompany = async () => {
+    if (selectedCandidates.length === 0) {
+      toast.error("No candidates selected");
+      return;
+    }
+    setPushLoading(true);
+    try {
+      const res = await api.post("/recruiter/candidates/push", {
+        applicationIds: selectedCandidates,
+        notes: "Bulk push by recruiter",
+        interviewDate: null
+      });
+      toast.success(res.data.message || `${selectedCandidates.length} candidate(s) pushed to company`);
+      setSelectedCandidates([]);
+      if (selectedJob) fetchCandidates(selectedJob);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Bulk push failed");
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   // Filter candidates based on all filters
   const filteredCandidates = candidates && candidates.length > 0
@@ -235,6 +311,9 @@ const CandidateManagement = () => {
   // Handle bulk actions
   const handleBulkAction = (action, items) => {
     console.log(`Bulk action: ${action}`, items);
+    if (action === 'push') {
+      pushSelectedToCompany();
+    }
   };
 
   // Handle quick actions
@@ -332,17 +411,18 @@ const CandidateManagement = () => {
         />
       </div>
 
-      {/* Bulk Actions Bar */}
+      {/* 🔥 Bulk push banner (when candidates selected) */}
       {selectedCandidates.length > 0 && (
-        <div className="lg:hidden">
-          <BulkActionsUI
-            items={filteredCandidates}
-            selectedItems={selectedCandidates}
-            onSelectAll={handleSelectAll}
-            onSelectItem={handleSelectCandidate}
-            onBulkAction={handleBulkAction}
-            isLoading={loading.candidates}
-          />
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 flex items-center justify-between flex-wrap gap-2">
+          <span className="text-sm text-indigo-700">{selectedCandidates.length} candidate(s) selected</span>
+          <button
+            onClick={pushSelectedToCompany}
+            disabled={pushLoading}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50 flex items-center"
+          >
+            {pushLoading ? <Loader size={16} className="animate-spin mr-2" /> : <Send size={16} className="mr-2" />}
+            Push to Company
+          </button>
         </div>
       )}
 
@@ -679,6 +759,7 @@ const CandidateManagement = () => {
                         candidate={candidate}
                         isSelected={selectedCandidates.includes(candidate._id)}
                         onSelect={handleSelectCandidate}
+                        onPush={pushCandidateToCompany}
                       />
                     ))}
                   </div>
@@ -760,12 +841,5 @@ const CandidateManagement = () => {
     </div>
   );
 };
-
-// ChevronDown Icon Component
-const ChevronDownIcon = ({ className = '' }) => (
-  <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-    <path d="M6 9l6 6 6-6"/>
-  </svg>
-);
 
 export default CandidateManagement;
