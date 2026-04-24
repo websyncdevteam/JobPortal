@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import axios from 'axios';
-import { ADMIN_API_END_POINT } from '@/utils/constant';
 import { toast } from 'sonner';
 import { useSelector, useDispatch } from 'react-redux';
 import { Button } from '../ui/button';
@@ -10,7 +8,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Loader2, Trash, ArrowLeft, Building } from 'lucide-react';
-import api from '../../services/api';
+import api from '../../services/api'; // ✅ use the shared axios instance
 
 const EditJob = () => {
   const { jobId } = useParams();
@@ -18,11 +16,9 @@ const EditJob = () => {
   const dispatch = useDispatch();
 
   const { user } = useSelector((store) => store.auth || {});
-  const { companies = [] } = useSelector((store) => store.company || {});
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [jobData, setJobData] = useState(null);
   const [jobCompany, setJobCompany] = useState(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -43,13 +39,13 @@ const EditJob = () => {
       }
 
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com';
-        const res = await axios.get(`${API_BASE_URL}/api/v1/jobs/${jobId}`);
+        // ✅ Use the shared api instance (no double /api/v1)
+        const res = await api.get(`/jobs/${jobId}`);
         
         if (res.data.success && res.data.data) {
           const job = res.data.data;
-          setJobData(job);
           
+          // Check authorization
           const canEdit = isAdmin || (user._id === job.postedBy?._id);
           setIsAuthorized(canEdit);
 
@@ -111,7 +107,7 @@ const EditJob = () => {
       }
     } catch (err) {
       console.error(err);
-      toast.error('Failed to update job');
+      toast.error(err.response?.data?.message || 'Failed to update job');
     } finally {
       setUpdating(false);
     }
@@ -137,7 +133,7 @@ const EditJob = () => {
       }
     } catch (err) {
       console.error(err);
-      toast.error('Failed to delete job');
+      toast.error(err.response?.data?.message || 'Failed to delete job');
     } finally {
       setDeleting(false);
     }
@@ -196,37 +192,15 @@ const EditJob = () => {
           </div>
           
           <div>
-            <Label>Company *</Label>
+            <Label>Company</Label>
             {jobCompany ? (
               <div className="flex items-center gap-2 p-2 border rounded bg-gray-50">
                 <Building className="h-4 w-4" />
                 <span>{jobCompany.name}</span>
-                <input type="hidden" {...register('company', { required: true })} value={jobCompany._id} />
               </div>
-            ) : companies.length > 0 ? (
-              <select
-                {...register('company', { required: true })}
-                className="w-full border px-3 py-2 rounded-md"
-              >
-                <option value="">Select company</option>
-                {companies.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
             ) : (
-              <div>
-                <Input 
-                  {...register('company', { required: true })} 
-                  placeholder="Enter company ID"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Enter company ID manually (from database)
-                </p>
-              </div>
+              <Input disabled placeholder="Company not available" />
             )}
-            {errors.company && <p className="text-red-600 text-sm">Company is required</p>}
           </div>
           
           <div>
