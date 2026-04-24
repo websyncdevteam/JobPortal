@@ -1,3 +1,4 @@
+// src/components/admin/EditJob.jsx - FIXED: Convert IDs to strings for comparison
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams, Link } from 'react-router-dom';
@@ -8,7 +9,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Loader2, Trash, ArrowLeft, Building } from 'lucide-react';
-import api from '../../services/api'; // ✅ use the shared axios instance
+import api from '../../services/api';
 
 const EditJob = () => {
   const { jobId } = useParams();
@@ -39,14 +40,13 @@ const EditJob = () => {
       }
 
       try {
-        // ✅ Use the shared api instance (no double /api/v1)
         const res = await api.get(`/jobs/${jobId}`);
         
         if (res.data.success && res.data.data) {
           const job = res.data.data;
           
-          // Check authorization
-          const canEdit = isAdmin || (user._id === job.postedBy?._id);
+          // ✅ Convert both IDs to strings for reliable comparison
+          const canEdit = isAdmin || (user._id?.toString() === job.postedBy?._id?.toString());
           setIsAuthorized(canEdit);
 
           if (!canEdit) {
