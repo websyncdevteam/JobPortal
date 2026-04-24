@@ -10,6 +10,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Loader2, Trash, ArrowLeft, Building } from 'lucide-react';
+import api from '../../services/api';
 
 const EditJob = () => {
   const { jobId } = useParams();
@@ -23,6 +24,7 @@ const EditJob = () => {
   const [deleting, setDeleting] = useState(false);
   const [jobData, setJobData] = useState(null);
   const [jobCompany, setJobCompany] = useState(null);
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   const {
     register,
@@ -31,19 +33,16 @@ const EditJob = () => {
     formState: { errors }
   } = useForm();
 
-  // Check if user is admin
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
-  // Fetch job data
   useEffect(() => {
     const fetchJob = async () => {
       if (!jobId || !user) {
-        navigate('/admin/jobs');
+        navigate(isAdmin ? '/admin/jobs' : '/recruiter/jobs');
         return;
       }
 
       try {
-        // Use environment variable for API base URL
         const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://www.backendserver.aim9hire.com';
         const res = await axios.get(`${API_BASE_URL}/api/v1/jobs/${jobId}`);
         
@@ -51,7 +50,15 @@ const EditJob = () => {
           const job = res.data.data;
           setJobData(job);
           
-          // Store company info from job
+          const canEdit = isAdmin || (user._id === job.postedBy?._id);
+          setIsAuthorized(canEdit);
+
+          if (!canEdit) {
+            toast.error('You are not authorized to edit this job');
+            navigate(isAdmin ? '/admin/jobs' : '/recruiter/jobs');
+            return;
+          }
+
           if (job.company) {
             setJobCompany(job.company);
           }
@@ -67,24 +74,23 @@ const EditJob = () => {
           });
         } else {
           toast.error("Job not found");
-          navigate('/admin/jobs');
+          navigate(isAdmin ? '/admin/jobs' : '/recruiter/jobs');
         }
       } catch (err) {
         console.error(err);
         toast.error('Failed to load job');
-        navigate('/admin/jobs');
+        navigate(isAdmin ? '/admin/jobs' : '/recruiter/jobs');
       } finally {
         setLoading(false);
       }
     };
 
     fetchJob();
-  }, [jobId, user, navigate, reset]);
+  }, [jobId, user, navigate, reset, isAdmin]);
 
-  // Submit updated job
   const onSubmit = async (data) => {
-    if (!isAdmin) {
-      toast.error('Admin privileges required');
+    if (!isAuthorized) {
+      toast.error('You are not authorized to update this job');
       return;
     }
 
@@ -96,16 +102,12 @@ const EditJob = () => {
         skills: data.skills.split(',').map((s) => s.trim()).filter(s => s.length > 0),
       };
 
-      const api = axios.create({
-        baseURL: ADMIN_API_END_POINT,
-        withCredentials: true,
-      });
-
-      const res = await api.put(`/jobs/${jobId}`, updatedData);
+      const endpoint = isAdmin ? `/admin/jobs/${jobId}` : `/recruiter/jobs/${jobId}`;
+      const res = await api.put(endpoint, updatedData);
 
       if (res.data.success) {
         toast.success(res.data.message || 'Job updated successfully');
-        navigate('/admin/jobs');
+        navigate(isAdmin ? '/admin/jobs' : '/recruiter/jobs');
       }
     } catch (err) {
       console.error(err);
@@ -115,10 +117,9 @@ const EditJob = () => {
     }
   };
 
-  // Delete job
   const handleDelete = async () => {
-    if (!isAdmin) {
-      toast.error('Admin privileges required');
+    if (!isAuthorized) {
+      toast.error('You are not authorized to delete this job');
       return;
     }
 
@@ -127,16 +128,12 @@ const EditJob = () => {
 
     setDeleting(true);
     try {
-      const api = axios.create({
-        baseURL: ADMIN_API_END_POINT,
-        withCredentials: true,
-      });
-
-      const res = await api.delete(`/jobs/${jobId}`);
+      const endpoint = isAdmin ? `/admin/jobs/${jobId}` : `/recruiter/jobs/${jobId}`;
+      const res = await api.delete(endpoint);
       if (res.data.success) {
         toast.success(res.data.message || 'Job deleted successfully');
         dispatch({ type: "REMOVE_JOB", payload: jobId });
-        navigate('/admin/jobs');
+        navigate(isAdmin ? '/admin/jobs' : '/recruiter/jobs');
       }
     } catch (err) {
       console.error(err);
@@ -157,12 +154,23 @@ const EditJob = () => {
     );
   }
 
+  if (!isAuthorized) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-red-600 mb-2">Access Denied</h2>
+          <p className="text-gray-600">You do not have permission to edit this job.</p>
+          <button onClick={() => navigate(isAdmin ? '/admin/jobs' : '/recruiter/jobs')} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded">Go Back</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-6">
-      {/* Header with company info */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Link to="/admin/jobs">
+          <Link to={isAdmin ? "/admin/jobs" : "/recruiter/jobs"}>
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
