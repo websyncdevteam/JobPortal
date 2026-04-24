@@ -1,4 +1,4 @@
-// src/App.jsx - UPDATED WITH TEAM MANAGEMENT ROUTES + RECRUITER JOB CREATE + STATS REDIRECT
+// src/App.jsx - UPDATED WITH TEAM MANAGEMENT ROUTES + RECRUITER JOB CREATE + STATS REDIRECT + EDIT JOB ROUTE
 import React, { useEffect, useState } from "react";
 import {
   createBrowserRouter,
@@ -291,13 +291,14 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardOverview /> },
       { path: "jobs", element: <JobManagement /> },
-      { path: "jobs/create", element: <PostJob /> }, // route for posting a new job
+      { path: "jobs/create", element: <PostJob /> },                // create job
+      { path: "jobs/edit/:jobId", element: <EditJob /> },           // ✅ ADDED: edit job
       { path: "candidates", element: <CandidateManagement /> },
       { path: "interviews", element: <InterviewScheduling /> },
       { path: "analytics", element: <AnalyticsRecruiter /> },
       { path: "settings", element: <Settings /> },
       { path: "my-team", element: <SubAdminTeamManagement /> },
-      { path: "stats", element: <Navigate to="/recruiter/analytics" replace /> }, // ✅ ADDED: redirect /stats to analytics
+      { path: "stats", element: <Navigate to="/recruiter/analytics" replace /> },
     ],
   },
 
