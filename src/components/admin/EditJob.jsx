@@ -1,4 +1,4 @@
-// src/components/admin/EditJob.jsx - FINAL ROBUST VERSION
+// src/components/admin/EditJob.jsx - FINAL FIX FOR USER ID
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams, Link } from 'react-router-dom';
@@ -31,10 +31,11 @@ const EditJob = () => {
   } = useForm();
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const currentUserId = user?._id || user?.id; // ✅ fallback to id
 
   useEffect(() => {
     const fetchJob = async () => {
-      if (!jobId || !user) {
+      if (!jobId || !currentUserId) {
         navigate(isAdmin ? '/admin/jobs' : '/recruiter/jobs');
         return;
       }
@@ -46,7 +47,7 @@ const EditJob = () => {
         if (res.data.success && res.data.data) {
           const job = res.data.data;
           
-          // ✅ Extract postedBy ID safely (could be object or string)
+          // Extract postedBy ID safely (object or string)
           let postedById = null;
           if (job.postedBy) {
             if (typeof job.postedBy === 'object' && job.postedBy._id) {
@@ -56,8 +57,8 @@ const EditJob = () => {
             }
           }
           
-          const canEdit = isAdmin || (user._id?.toString() === postedById);
-          console.log('User ID:', user._id?.toString(), 'PostedBy ID:', postedById, 'Can edit:', canEdit);
+          const canEdit = isAdmin || (currentUserId.toString() === postedById);
+          console.log('User ID:', currentUserId.toString(), 'PostedBy ID:', postedById, 'Can edit:', canEdit);
           setIsAuthorized(canEdit);
 
           if (!canEdit) {
@@ -93,7 +94,7 @@ const EditJob = () => {
     };
 
     fetchJob();
-  }, [jobId, user, navigate, reset, isAdmin]);
+  }, [jobId, currentUserId, navigate, reset, isAdmin]);
 
   const onSubmit = async (data) => {
     if (!isAuthorized) {
