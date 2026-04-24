@@ -9,16 +9,57 @@ import ActivityTimelineUI from './ActivityTimelineUI';
 import api from '../../services/api';
 import { toast } from 'sonner';
 
-// Candidate Card Component (with Push & Schedule)
-const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule }) => {
+// Helper Icon Components
+const CalendarIcon = ({ size = 16, className = "" }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+    <line x1="16" y1="2" x2="16" y2="6"/>
+    <line x1="8" y1="2" x2="8" y2="6"/>
+    <line x1="3" y1="10" x2="21" y2="10"/>
+  </svg>
+);
+
+const BriefcaseIcon = ({ size = 16, className = "" }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+  </svg>
+);
+
+const MoreVerticalIcon = ({ size = 16, className = "" }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <circle cx="12" cy="12" r="1"/>
+    <circle cx="12" cy="5" r="1"/>
+    <circle cx="12" cy="19" r="1"/>
+  </svg>
+);
+
+const ChevronDownIcon = ({ className = '' }) => (
+  <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <path d="M6 9l6 6 6-6"/>
+  </svg>
+);
+
+const DollarSign = ({ size = 16, className = "" }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <line x1="12" y1="1" x2="12" y2="23"/>
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+  </svg>
+);
+
+// Candidate Card Component (with all three actions: Push, Schedule, Payout)
+const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, onSetPayout }) => {
   const [pushing, setPushing] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [scheduleData, setScheduleData] = useState({
     scheduledTime: '',
     type: 'online',
     meetingLink: '',
     notes: ''
   });
+  const [payoutAmount, setPayoutAmount] = useState('');
+  const [payoutNotes, setPayoutNotes] = useState('');
 
   const handlePush = async () => {
     setPushing(true);
@@ -44,6 +85,23 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule }) 
       console.error('Schedule error:', error);
     }
   };
+
+  const handlePayoutSubmit = async () => {
+    if (!payoutAmount || parseFloat(payoutAmount) <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+    try {
+      await onSetPayout(candidate._id, parseFloat(payoutAmount), payoutNotes);
+      setShowPayoutModal(false);
+      setPayoutAmount('');
+      setPayoutNotes('');
+    } catch (error) {
+      console.error('Payout error:', error);
+    }
+  };
+
+  const showPayout = candidate.source === 'freelancer' && ['selected', 'hired', 'joined'].includes(candidate.status);
 
   return (
     <>
@@ -75,19 +133,17 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule }) 
                 <h3 className="font-semibold text-gray-900 truncate text-base">{candidate.name || 'Unnamed Candidate'}</h3>
                 <p className="text-gray-500 text-sm mt-1 truncate">Applied for {candidate.jobTitle || 'Unknown Position'}</p>
               </div>
-              <span
-                className={`mt-2 sm:mt-0 px-2 py-1 rounded-full text-xs font-medium self-start sm:self-center ${
-                  candidate.status === 'new'
-                    ? 'bg-blue-100 text-blue-800'
-                    : candidate.status === 'reviewed'
-                    ? 'bg-amber-100 text-amber-800'
-                    : candidate.status === 'interview'
-                    ? 'bg-purple-100 text-purple-800'
-                    : candidate.status === 'hired'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}
-              >
+              <span className={`mt-2 sm:mt-0 px-2 py-1 rounded-full text-xs font-medium self-start sm:self-center ${
+                candidate.status === 'new'
+                  ? 'bg-blue-100 text-blue-800'
+                  : candidate.status === 'reviewed'
+                  ? 'bg-amber-100 text-amber-800'
+                  : candidate.status === 'interview'
+                  ? 'bg-purple-100 text-purple-800'
+                  : candidate.status === 'hired'
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
                 {candidate.status === 'new'
                   ? 'New'
                   : candidate.status === 'reviewed'
@@ -114,76 +170,52 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule }) 
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
-              <a
-                href={`tel:${candidate.phone}`}
-                className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm"
-                title="Call candidate"
-              >
-                <div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors">
-                  <Phone size={14} />
-                </div>
+              <a href={`tel:${candidate.phone}`} className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm" title="Call candidate">
+                <div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors"><Phone size={14} /></div>
                 <span className="ml-1.5 hidden sm:inline">Call</span>
               </a>
-              <a
-                href={`mailto:${candidate.email}`}
-                className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm"
-                title="Email candidate"
-              >
-                <div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors">
-                  <Mail size={14} />
-                </div>
+              <a href={`mailto:${candidate.email}`} className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm" title="Email candidate">
+                <div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors"><Mail size={14} /></div>
                 <span className="ml-1.5 hidden sm:inline">Email</span>
               </a>
-              <button 
-                className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm"
-                title="View resume"
-              >
-                <div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors">
-                  <FileText size={14} />
-                </div>
+              <button className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm" title="View resume">
+                <div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors"><FileText size={14} /></div>
                 <span className="ml-1.5 hidden sm:inline">Resume</span>
               </button>
               
-              {/* 🔥 Push to Company button */}
-              <button 
-                onClick={handlePush}
-                disabled={pushing}
-                className="inline-flex items-center text-indigo-600 hover:text-indigo-800 transition-colors text-sm"
-                title="Push candidate to company"
-              >
+              {/* Push to Company button */}
+              <button onClick={handlePush} disabled={pushing} className="inline-flex items-center text-indigo-600 hover:text-indigo-800 transition-colors text-sm" title="Push candidate to company">
                 <div className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 transition-colors">
                   {pushing ? <Loader size={14} className="animate-spin" /> : <Send size={14} />}
                 </div>
-                <span className="ml-1.5 hidden sm:inline">Push to Co.</span>
+                <span className="ml-1.5 hidden sm:inline">Push</span>
               </button>
               
-              {/* 🔥 Schedule Interview button */}
-              <button 
-                onClick={() => setShowScheduleModal(true)}
-                className="inline-flex items-center text-purple-600 hover:text-purple-800 transition-colors text-sm"
-                title="Schedule interview"
-              >
-                <div className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors">
-                  <CalendarIcon size={14} />
-                </div>
+              {/* Schedule Interview button */}
+              <button onClick={() => setShowScheduleModal(true)} className="inline-flex items-center text-purple-600 hover:text-purple-800 transition-colors text-sm" title="Schedule interview">
+                <div className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100"><CalendarIcon size={14} /></div>
                 <span className="ml-1.5 hidden sm:inline">Schedule</span>
               </button>
+
+              {/* Set Payout button (only for freelancer-sourced hired candidates) */}
+              {showPayout && (
+                <button onClick={() => setShowPayoutModal(true)} className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors text-sm" title="Set Payout for Freelancer">
+                  <div className="p-1.5 rounded-lg bg-green-50 hover:bg-green-100"><DollarSign size={14} /></div>
+                  <span className="ml-1.5 hidden sm:inline">Payout</span>
+                </button>
+              )}
               
               <div className="flex-1"></div>
-              
               <button className="inline-flex items-center text-gray-500 hover:text-gray-700 transition-colors text-sm">
-                <div className="p-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                  <MoreVerticalIcon size={14} />
-                </div>
+                <div className="p-1.5 rounded-lg bg-gray-50 hover:bg-gray-100"><MoreVerticalIcon size={14} /></div>
               </button>
             </div>
 
             <div className="mt-3 flex flex-col xs:flex-row gap-2">
-              <button className="flex-1 text-sm bg-indigo-50 text-indigo-700 px-3 py-2 rounded-lg hover:bg-indigo-100 transition-colors flex items-center justify-center">
-                <CalendarIcon size={14} className="mr-2" />
-                <span className="truncate">Schedule</span>
+              <button className="flex-1 text-sm bg-indigo-50 text-indigo-700 px-3 py-2 rounded-lg hover:bg-indigo-100 flex items-center justify-center">
+                <CalendarIcon size={14} className="mr-2" /> Schedule
               </button>
-              <button className="flex-1 text-sm bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors truncate">
+              <button className="flex-1 text-sm bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 truncate">
                 View Profile
               </button>
             </div>
@@ -197,66 +229,31 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule }) 
           <div className="bg-white rounded-xl max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Schedule Interview</h3>
-              <button onClick={() => setShowScheduleModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={20} />
-              </button>
+              <button onClick={() => setShowScheduleModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Date & Time</label>
-                <input
-                  type="datetime-local"
-                  value={scheduleData.scheduledTime}
-                  onChange={(e) => setScheduleData({ ...scheduleData, scheduledTime: e.target.value })}
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Interview Type</label>
-                <select
-                  value={scheduleData.type}
-                  onChange={(e) => setScheduleData({ ...scheduleData, type: e.target.value })}
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="online">Online (Video Call)</option>
-                  <option value="offline">Offline (In-Person)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Meeting Link (for online)</label>
-                <input
-                  type="url"
-                  placeholder="https://meet.google.com/..."
-                  value={scheduleData.meetingLink}
-                  onChange={(e) => setScheduleData({ ...scheduleData, meetingLink: e.target.value })}
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Additional Notes</label>
-                <textarea
-                  rows="3"
-                  value={scheduleData.notes}
-                  onChange={(e) => setScheduleData({ ...scheduleData, notes: e.target.value })}
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  placeholder="Any instructions for the candidate..."
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={handleScheduleSubmit}
-                  className="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  Schedule & Send Email
-                </button>
-                <button
-                  onClick={() => setShowScheduleModal(false)}
-                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
+              <div><label className="block text-sm font-medium text-gray-700">Date & Time</label><input type="datetime-local" value={scheduleData.scheduledTime} onChange={(e) => setScheduleData({ ...scheduleData, scheduledTime: e.target.value })} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" required /></div>
+              <div><label className="block text-sm font-medium text-gray-700">Interview Type</label><select value={scheduleData.type} onChange={(e) => setScheduleData({ ...scheduleData, type: e.target.value })} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"><option value="online">Online (Video Call)</option><option value="offline">Offline (In-Person)</option></select></div>
+              <div><label className="block text-sm font-medium text-gray-700">Meeting Link (for online)</label><input type="url" placeholder="https://meet.google.com/..." value={scheduleData.meetingLink} onChange={(e) => setScheduleData({ ...scheduleData, meetingLink: e.target.value })} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" /></div>
+              <div><label className="block text-sm font-medium text-gray-700">Additional Notes</label><textarea rows="3" value={scheduleData.notes} onChange={(e) => setScheduleData({ ...scheduleData, notes: e.target.value })} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="Any instructions for the candidate..." /></div>
+              <div className="flex gap-3 pt-2"><button onClick={handleScheduleSubmit} className="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700">Schedule & Send Email</button><button onClick={() => setShowScheduleModal(false)} className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300">Cancel</button></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Set Payout Modal */}
+      {showPayoutModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Set Payout for Freelancer</h3>
+              <button onClick={() => setShowPayoutModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <div className="space-y-4">
+              <div><label className="block text-sm font-medium text-gray-700">Amount (USD)</label><input type="number" step="0.01" value={payoutAmount} onChange={(e) => setPayoutAmount(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="e.g., 500" /></div>
+              <div><label className="block text-sm font-medium text-gray-700">Notes (Optional)</label><textarea rows="2" value={payoutNotes} onChange={(e) => setPayoutNotes(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Any notes about this payout..." /></div>
+              <div className="flex gap-3 pt-2"><button onClick={handlePayoutSubmit} className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">Set Payout</button><button onClick={() => setShowPayoutModal(false)} className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300">Cancel</button></div>
             </div>
           </div>
         </div>
@@ -265,38 +262,7 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule }) 
   );
 };
 
-// Helper Icon Components (unchanged)
-const CalendarIcon = ({ size = 16, className = "" }) => (
-  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-    <line x1="16" y1="2" x2="16" y2="6"/>
-    <line x1="8" y1="2" x2="8" y2="6"/>
-    <line x1="3" y1="10" x2="21" y2="10"/>
-  </svg>
-);
-
-const BriefcaseIcon = ({ size = 16, className = "" }) => (
-  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-  </svg>
-);
-
-const MoreVerticalIcon = ({ size = 16, className = "" }) => (
-  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-    <circle cx="12" cy="12" r="1"/>
-    <circle cx="12" cy="5" r="1"/>
-    <circle cx="12" cy="19" r="1"/>
-  </svg>
-);
-
-const ChevronDownIcon = ({ className = '' }) => (
-  <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-    <path d="M6 9l6 6 6-6"/>
-  </svg>
-);
-
-// Main CandidateManagement Component
+// Main CandidateManagement Component (unchanged except for additional handlers)
 const CandidateManagement = () => {
   const { jobs, candidates, loading, fetchCandidates } = useRecruiter();
   const [selectedJob, setSelectedJob] = useState('');
@@ -311,25 +277,17 @@ const CandidateManagement = () => {
   const [pushLoading, setPushLoading] = useState(false);
 
   useEffect(() => {
-    if (jobs && jobs.length > 0 && !selectedJob) {
-      setSelectedJob(jobs[0]._id);
-    }
+    if (jobs && jobs.length > 0 && !selectedJob) setSelectedJob(jobs[0]._id);
   }, [jobs]);
 
   useEffect(() => {
-    if (selectedJob) {
-      fetchCandidates(selectedJob);
-    }
+    if (selectedJob) fetchCandidates(selectedJob);
   }, [selectedJob]);
 
-  // Push a single candidate to company
+  // Push single candidate
   const pushCandidateToCompany = async (applicationId) => {
     try {
-      const res = await api.post("/recruiter/candidates/push", {
-        applicationIds: [applicationId],
-        notes: "Pushed by recruiter",
-        interviewDate: null
-      });
+      const res = await api.post("/recruiter/candidates/push", { applicationIds: [applicationId], notes: "Pushed by recruiter", interviewDate: null });
       toast.success(res.data.message || "Candidate pushed to company");
       if (selectedJob) fetchCandidates(selectedJob);
       return true;
@@ -339,19 +297,12 @@ const CandidateManagement = () => {
     }
   };
 
-  // Bulk push selected candidates
+  // Bulk push
   const pushSelectedToCompany = async () => {
-    if (selectedCandidates.length === 0) {
-      toast.error("No candidates selected");
-      return;
-    }
+    if (selectedCandidates.length === 0) { toast.error("No candidates selected"); return; }
     setPushLoading(true);
     try {
-      const res = await api.post("/recruiter/candidates/push", {
-        applicationIds: selectedCandidates,
-        notes: "Bulk push by recruiter",
-        interviewDate: null
-      });
+      const res = await api.post("/recruiter/candidates/push", { applicationIds: selectedCandidates, notes: "Bulk push by recruiter", interviewDate: null });
       toast.success(res.data.message || `${selectedCandidates.length} candidate(s) pushed to company`);
       setSelectedCandidates([]);
       if (selectedJob) fetchCandidates(selectedJob);
@@ -362,16 +313,10 @@ const CandidateManagement = () => {
     }
   };
 
-  // Schedule interview for a candidate
+  // Schedule interview
   const scheduleInterviewForCandidate = async (applicationId, scheduleData) => {
     try {
-      await api.post("/recruiter/interviews/schedule", {
-        applicationId,
-        scheduledTime: scheduleData.scheduledTime,
-        type: scheduleData.type,
-        meetingLink: scheduleData.meetingLink,
-        notes: scheduleData.notes
-      });
+      await api.post("/recruiter/interviews/schedule", { applicationId, scheduledTime: scheduleData.scheduledTime, type: scheduleData.type, meetingLink: scheduleData.meetingLink, notes: scheduleData.notes });
       toast.success("Interview scheduled and email sent to candidate");
       if (selectedJob) fetchCandidates(selectedJob);
       return true;
@@ -381,7 +326,20 @@ const CandidateManagement = () => {
     }
   };
 
-  // Filter candidates (unchanged)
+  // Set payout for freelancer
+  const handleSetPayout = async (applicationId, amount, notes) => {
+    try {
+      const res = await api.post("/recruiter/payouts/set", { applicationId, amount, notes });
+      toast.success(res.data.message || "Payout amount set");
+      if (selectedJob) fetchCandidates(selectedJob);
+      return true;
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to set payout");
+      throw err;
+    }
+  };
+
+  // Filtering logic (unchanged)
   const filteredCandidates = candidates && candidates.length > 0
     ? candidates.filter((candidate) => {
         if (statusFilter !== 'all' && candidate.status !== statusFilter) return false;
@@ -397,21 +355,15 @@ const CandidateManagement = () => {
     : [];
 
   const handleSelectCandidate = (candidateId) => {
-    setSelectedCandidates(prev => 
-      prev.includes(candidateId) ? prev.filter(id => id !== candidateId) : [...prev, candidateId]
-    );
+    setSelectedCandidates(prev => prev.includes(candidateId) ? prev.filter(id => id !== candidateId) : [...prev, candidateId]);
   };
 
   const handleSelectAll = () => {
-    if (selectedCandidates.length === filteredCandidates.length) {
-      setSelectedCandidates([]);
-    } else {
-      setSelectedCandidates(filteredCandidates.map(c => c._id));
-    }
+    if (selectedCandidates.length === filteredCandidates.length) setSelectedCandidates([]);
+    else setSelectedCandidates(filteredCandidates.map(c => c._id));
   };
 
   const handleBulkAction = (action, items) => {
-    console.log(`Bulk action: ${action}`, items);
     if (action === 'push') pushSelectedToCompany();
   };
 
@@ -421,10 +373,9 @@ const CandidateManagement = () => {
 
   const selectedJobName = jobs?.find(job => job._id === selectedJob)?.title || '';
 
-  // Full JSX (unchanged except added onSchedule prop)
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* Header with View Toggle */}
+      {/* Header (unchanged) */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 lg:gap-4">
         <div className="min-w-0">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">Candidate Management</h1>
@@ -432,43 +383,28 @@ const CandidateManagement = () => {
         </div>
         <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2 md:gap-3">
           <div className="hidden md:flex bg-gray-100 rounded-lg p-1">
-            <button onClick={() => setViewMode('cards')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center ${viewMode === 'cards' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>
-              <List size={14} className="mr-1.5" /> Cards
-            </button>
-            <button onClick={() => setViewMode('pipeline')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center ${viewMode === 'pipeline' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>
-              <Grid size={14} className="mr-1.5" /> Pipeline
-            </button>
-            <button onClick={() => setViewMode('timeline')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center ${viewMode === 'timeline' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>
-              <CalendarIcon size={14} className="mr-1.5" /> Timeline
-            </button>
+            <button onClick={() => setViewMode('cards')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center ${viewMode === 'cards' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}><List size={14} className="mr-1.5" /> Cards</button>
+            <button onClick={() => setViewMode('pipeline')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center ${viewMode === 'pipeline' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}><Grid size={14} className="mr-1.5" /> Pipeline</button>
+            <button onClick={() => setViewMode('timeline')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center ${viewMode === 'timeline' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}><CalendarIcon size={14} className="mr-1.5" /> Timeline</button>
           </div>
-          <button onClick={() => setShowMobileFilters(!showMobileFilters)} className="md:hidden flex items-center justify-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-            <Filter size={18} /><span className="ml-2">Filters</span>
-          </button>
-          <button className="flex items-center justify-center bg-indigo-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-indigo-700">
-            <Plus size={16} className="mr-1.5 md:mr-2" />
-            <span className="hidden xs:inline">Add Candidate</span>
-            <span className="xs:hidden">Add</span>
-          </button>
+          <button onClick={() => setShowMobileFilters(!showMobileFilters)} className="md:hidden flex items-center justify-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"><Filter size={18} /><span className="ml-2">Filters</span></button>
+          <button className="flex items-center justify-center bg-indigo-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-indigo-700"><Plus size={16} className="mr-1.5 md:mr-2" /><span className="hidden xs:inline">Add Candidate</span><span className="xs:hidden">Add</span></button>
         </div>
       </div>
 
-      <div className="hidden lg:block">
-        <QuickActionsToolbar onAction={handleQuickAction} currentView="candidates" />
-      </div>
+      <div className="hidden lg:block"><QuickActionsToolbar onAction={handleQuickAction} currentView="candidates" /></div>
 
       {selectedCandidates.length > 0 && (
         <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 flex items-center justify-between flex-wrap gap-2">
           <span className="text-sm text-indigo-700">{selectedCandidates.length} candidate(s) selected</span>
           <button onClick={pushSelectedToCompany} disabled={pushLoading} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50 flex items-center">
-            {pushLoading ? <Loader size={16} className="animate-spin mr-2" /> : <Send size={16} className="mr-2" />}
-            Push to Company
+            {pushLoading ? <Loader size={16} className="animate-spin mr-2" /> : <Send size={16} className="mr-2" />} Push to Company
           </button>
         </div>
       )}
 
       <div className="flex flex-col lg:flex-row gap-4 md:gap-6">
-        {/* Filters Sidebar - Desktop */}
+        {/* Filters Sidebar - Desktop (unchanged) */}
         <div className="hidden lg:block w-full lg:w-80 flex-shrink-0">
           <div className="sticky top-6 space-y-6">
             <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
@@ -553,6 +489,7 @@ const CandidateManagement = () => {
                         onSelect={handleSelectCandidate}
                         onPush={pushCandidateToCompany}
                         onSchedule={scheduleInterviewForCandidate}
+                        onSetPayout={handleSetPayout}
                       />
                     ))}
                   </div>
