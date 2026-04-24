@@ -1,4 +1,4 @@
-// src/components/admin/EditJob.jsx - FIXED: Convert IDs to strings for comparison
+// src/components/admin/EditJob.jsx - FINAL ROBUST VERSION
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams, Link } from 'react-router-dom';
@@ -41,12 +41,23 @@ const EditJob = () => {
 
       try {
         const res = await api.get(`/jobs/${jobId}`);
+        console.log('Job fetch response:', res.data);
         
         if (res.data.success && res.data.data) {
           const job = res.data.data;
           
-          // ✅ Convert both IDs to strings for reliable comparison
-          const canEdit = isAdmin || (user._id?.toString() === job.postedBy?._id?.toString());
+          // ✅ Extract postedBy ID safely (could be object or string)
+          let postedById = null;
+          if (job.postedBy) {
+            if (typeof job.postedBy === 'object' && job.postedBy._id) {
+              postedById = job.postedBy._id.toString();
+            } else if (typeof job.postedBy === 'string') {
+              postedById = job.postedBy;
+            }
+          }
+          
+          const canEdit = isAdmin || (user._id?.toString() === postedById);
+          console.log('User ID:', user._id?.toString(), 'PostedBy ID:', postedById, 'Can edit:', canEdit);
           setIsAuthorized(canEdit);
 
           if (!canEdit) {
