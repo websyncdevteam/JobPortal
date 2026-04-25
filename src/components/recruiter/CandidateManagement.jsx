@@ -525,7 +525,7 @@ const CandidateManagement = () => {
             <div className="text-center"><div className="text-xl md:text-2xl font-bold text-blue-600">{filteredCandidates.filter(c => c.status === 'new').length}</div><div className="text-xs md:text-sm text-gray-500">New</div></div>
             <div className="text-center"><div className="text-xl md:text-2xl font-bold text-amber-600">{filteredCandidates.filter(c => c.status === 'reviewed').length}</div><div className="text-xs md:text-sm text-gray-500">Reviewed</div></div>
             <div className="text-center"><div className="text-xl md:text-2xl font-bold text-purple-600">{filteredCandidates.filter(c => c.status === 'interview').length}</div><div className="text-xs md:text-sm text-gray-500">Interview</div></div>
-            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-green-600">{filteredCandidates.filter(c => c.status === 'hired').length}</div><div className="text-xs md:text-sm text-gray-500">Hired</div></div>
+            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-green-600}>{filteredCandidates.filter(c => c.status === 'hired').length}</div><div className="text-xs md:text-sm text-gray-500">Hired</div></div>
             <div className="text-center"><div className="text-xl md:text-2xl font-bold text-gray-600}>{filteredCandidates.filter(c => c.status === 'rejected').length}</div><div className="text-xs md:text-sm text-gray-500">Rejected</div></div>
           </div>
         </div>
