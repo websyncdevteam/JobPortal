@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Loader, Phone, Mail, FileText, Grid, List, Filter, Download, Plus, X, ChevronRight, ChevronLeft, Send, User, Briefcase, Calendar as CalendarIcon, DollarSign } from 'lucide-react';
+import { Users, Search, Loader, Phone, Mail, FileText, Grid, List, Filter, Download, Plus, X, ChevronRight, ChevronLeft, Send, User, Briefcase, Calendar as CalendarIcon } from 'lucide-react';
 import { useRecruiter } from '../../context/RecruiterContext';
 import PipelineView from './candidates/PipelineView';
 import AdvancedFilters from './AdvancedFilters';
@@ -9,7 +9,7 @@ import ActivityTimelineUI from './ActivityTimelineUI';
 import api from '../../services/api';
 import { toast } from 'sonner';
 
-// Helper Icon Components (unchanged)
+// Helper Icon Components
 const CalendarIconComp = ({ size = 16, className = "" }) => (
   <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor">
     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -47,12 +47,13 @@ const DollarSignIcon = ({ size = 16, className = "" }) => (
   </svg>
 );
 
-// Candidate Card Component (with Push, Schedule, Payout, and Profile Modal)
-const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, onSetPayout }) => {
+// Candidate Card Component (with Push, Schedule, Payout, Profile Modal, and Status Dropdown)
+const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, onSetPayout, onUpdateStatus }) => {
   const [pushing, setPushing] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [scheduleData, setScheduleData] = useState({
     scheduledTime: '',
     type: 'online',
@@ -102,14 +103,31 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
     }
   };
 
-  const showPayout = candidate.source === 'freelancer' && ['selected', 'hired', 'joined'].includes(candidate.status);
+  const handleStatusChange = async (newStatus) => {
+    if (newStatus === candidate.status) return;
+    setUpdatingStatus(true);
+    try {
+      await onUpdateStatus(candidate._id, newStatus);
+      toast.success(`Status updated to ${newStatus}`);
+    } catch (error) {
+      toast.error('Failed to update status');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
-  // Helper to get resume URL
+  const showPayout = candidate.source === 'freelancer' && ['selected', 'hired', 'joined'].includes(candidate.status);
   const getResumeUrl = () => {
     if (!candidate.resumeUrl) return '';
     if (candidate.resumeUrl.startsWith('http')) return candidate.resumeUrl;
     return `https://www.backendserver.aim9hire.com/api/uploads/${candidate.resumeUrl}`;
   };
+
+  const statusOptions = [
+    { value: 'applied', label: 'Applied' },
+    { value: 'recruiter_screening', label: 'Screening' },
+    { value: 'recruiter_interview', label: 'Interview' },
+  ];
 
   return (
     <>
@@ -127,19 +145,18 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
                 <h3 className="font-semibold text-gray-900 truncate text-base">{candidate.name || 'Unnamed Candidate'}</h3>
                 <p className="text-gray-500 text-sm mt-1 truncate">Applied for {candidate.jobTitle || 'Unknown Position'}</p>
               </div>
-              <span className={`mt-2 sm:mt-0 px-2 py-1 rounded-full text-xs font-medium self-start sm:self-center ${
-                candidate.status === 'new'
-                  ? 'bg-blue-100 text-blue-800'
-                  : candidate.status === 'reviewed'
-                  ? 'bg-amber-100 text-amber-800'
-                  : candidate.status === 'interview'
-                  ? 'bg-purple-100 text-purple-800'
-                  : candidate.status === 'hired'
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {candidate.status === 'new' ? 'New' : candidate.status === 'reviewed' ? 'Reviewed' : candidate.status === 'interview' ? 'Interview' : candidate.status === 'hired' ? 'Hired' : candidate.status || 'Unknown'}
-              </span>
+              <div className="mt-2 sm:mt-0">
+                <select
+                  value={candidate.status}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  disabled={updatingStatus}
+                  className="px-2 py-1 rounded-full text-xs font-medium border border-gray-300 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  {statusOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="mt-2 flex flex-wrap items-center text-gray-500 text-sm gap-2">
               <span className="flex items-center"><CalendarIconComp size={14} className="mr-1" />{candidate.appliedDate ? new Date(candidate.appliedDate).toLocaleDateString() : 'Recently'}</span>
@@ -167,7 +184,7 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
         </div>
       </div>
 
-      {/* Schedule Interview Modal (unchanged) */}
+      {/* Schedule Interview Modal */}
       {showScheduleModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -183,7 +200,7 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
         </div>
       )}
 
-      {/* Set Payout Modal (unchanged) */}
+      {/* Set Payout Modal */}
       {showPayoutModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -207,13 +224,8 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
             </div>
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
-                  <User size={24} className="text-indigo-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-xl">{candidate.name || 'Not provided'}</h4>
-                  <p className="text-gray-500">{candidate.email || 'No email'}</p>
-                </div>
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center"><User size={24} className="text-indigo-600" /></div>
+                <div><h4 className="font-semibold text-xl">{candidate.name || 'Not provided'}</h4><p className="text-gray-500">{candidate.email || 'No email'}</p></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="text-sm text-gray-500">Phone</label><p className="font-medium">{candidate.phone || 'Not provided'}</p></div>
@@ -221,20 +233,11 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
                 <div><label className="text-sm text-gray-500">Applied for</label><p className="font-medium">{candidate.jobTitle || 'Unknown'}</p></div>
                 <div><label className="text-sm text-gray-500">Status</label><p className="font-medium capitalize">{candidate.status || 'Unknown'}</p></div>
               </div>
-              <div>
-                <label className="text-sm text-gray-500">Skills</label>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {candidate.skills?.length > 0 ? candidate.skills.map((skill, i) => <span key={i} className="bg-gray-100 px-2 py-0.5 rounded-full text-sm">{skill}</span>) : <span className="text-gray-400 text-sm">No skills listed</span>}
-                </div>
-              </div>
+              <div><label className="text-sm text-gray-500">Skills</label><div className="flex flex-wrap gap-1 mt-1">{candidate.skills?.length > 0 ? candidate.skills.map((skill, i) => <span key={i} className="bg-gray-100 px-2 py-0.5 rounded-full text-sm">{skill}</span>) : <span className="text-gray-400 text-sm">No skills listed</span>}</div></div>
               {candidate.bio && <div><label className="text-sm text-gray-500">Bio</label><p className="text-sm mt-1">{candidate.bio}</p></div>}
-              {candidate.resumeUrl && (
-                <div><label className="text-sm text-gray-500">Resume</label><a href={getResumeUrl()} target="_blank" rel="noopener noreferrer" className="block mt-1 text-indigo-600 hover:underline">Download Resume</a></div>
-              )}
+              {candidate.resumeUrl && <div><label className="text-sm text-gray-500">Resume</label><a href={getResumeUrl()} target="_blank" rel="noopener noreferrer" className="block mt-1 text-indigo-600 hover:underline">Download Resume</a></div>}
             </div>
-            <div className="mt-6 flex justify-end">
-              <button onClick={() => setShowProfileModal(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Close</button>
-            </div>
+            <div className="mt-6 flex justify-end"><button onClick={() => setShowProfileModal(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Close</button></div>
           </div>
         </div>
       )}
@@ -242,7 +245,7 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
   );
 };
 
-// Main CandidateManagement Component (fixed mobile chips)
+// Main CandidateManagement Component
 const CandidateManagement = () => {
   const { jobs, candidates, loading, fetchCandidates } = useRecruiter();
   const [selectedJob, setSelectedJob] = useState('');
@@ -315,6 +318,17 @@ const CandidateManagement = () => {
     }
   };
 
+  const updateCandidateStatusLocal = async (applicationId, newStatus) => {
+    try {
+      await api.put(`/recruiter/candidates/${applicationId}/status`, { status: newStatus });
+      if (selectedJob) fetchCandidates(selectedJob);
+      return true;
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update status");
+      throw err;
+    }
+  };
+
   const filteredCandidates = candidates && candidates.length > 0
     ? candidates.filter((candidate) => {
         if (statusFilter !== 'all' && candidate.status !== statusFilter) return false;
@@ -360,7 +374,7 @@ const CandidateManagement = () => {
           <div className="hidden md:flex bg-gray-100 rounded-lg p-1">
             <button onClick={() => setViewMode('cards')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center ${viewMode === 'cards' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}><List size={14} className="mr-1.5" /> Cards</button>
             <button onClick={() => setViewMode('pipeline')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center ${viewMode === 'pipeline' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}><Grid size={14} className="mr-1.5" /> Pipeline</button>
-            <button onClick={() => setViewMode('timeline')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center ${viewMode === 'timeline' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}><CalendarIcon size={14} className="mr-1.5" /> Timeline</button>
+            <button onClick={() => setViewMode('timeline')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center ${viewMode === 'timeline' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}><CalendarIconComp size={14} className="mr-1.5" /> Timeline</button>
           </div>
           <button onClick={() => setShowMobileFilters(!showMobileFilters)} className="md:hidden flex items-center justify-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"><Filter size={18} /><span className="ml-2">Filters</span></button>
           <button className="flex items-center justify-center bg-indigo-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-indigo-700"><Plus size={16} className="mr-1.5 md:mr-2" /><span className="hidden xs:inline">Add Candidate</span><span className="xs:hidden">Add</span></button>
@@ -424,7 +438,7 @@ const CandidateManagement = () => {
             </div>
           )}
 
-          {/* Mobile Top Bar - FIXED */}
+          {/* Mobile Top Bar - Fixed */}
           <div className="lg:hidden mb-4 space-y-3">
             <div className="flex items-center gap-2">
               <div className="flex-1 relative">
@@ -486,6 +500,7 @@ const CandidateManagement = () => {
                         onPush={pushCandidateToCompany}
                         onSchedule={scheduleInterviewForCandidate}
                         onSetPayout={handleSetPayout}
+                        onUpdateStatus={updateCandidateStatusLocal}
                       />
                     ))}
                   </div>
@@ -511,7 +526,7 @@ const CandidateManagement = () => {
             <div className="text-center"><div className="text-xl md:text-2xl font-bold text-amber-600">{filteredCandidates.filter(c => c.status === 'reviewed').length}</div><div className="text-xs md:text-sm text-gray-500">Reviewed</div></div>
             <div className="text-center"><div className="text-xl md:text-2xl font-bold text-purple-600">{filteredCandidates.filter(c => c.status === 'interview').length}</div><div className="text-xs md:text-sm text-gray-500">Interview</div></div>
             <div className="text-center"><div className="text-xl md:text-2xl font-bold text-green-600">{filteredCandidates.filter(c => c.status === 'hired').length}</div><div className="text-xs md:text-sm text-gray-500">Hired</div></div>
-            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-gray-600">{filteredCandidates.filter(c => c.status === 'rejected').length}</div><div className="text-xs md:text-sm text-gray-500">Rejected</div></div>
+            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-gray-600}>{filteredCandidates.filter(c => c.status === 'rejected').length}</div><div className="text-xs md:text-sm text-gray-500">Rejected</div></div>
           </div>
         </div>
       )}
