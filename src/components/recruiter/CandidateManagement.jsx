@@ -9,7 +9,7 @@ import ActivityTimelineUI from './ActivityTimelineUI';
 import api from '../../services/api';
 import { toast } from 'sonner';
 
-// Helper Icons (unchanged)
+// Helper Icons
 const CalendarIcon = ({ size = 16, className = "" }) => (
   <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor">
     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -161,7 +161,7 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
   );
 };
 
-// Main CandidateManagement Component (kept the same as your original, only CandidateCard is new)
+// Main CandidateManagement Component
 const CandidateManagement = () => {
   const { jobs, candidates, loading, fetchCandidates } = useRecruiter();
   const [selectedJob, setSelectedJob] = useState('');
@@ -265,6 +265,14 @@ const CandidateManagement = () => {
   };
 
   const selectedJobName = jobs?.find(job => job._id === selectedJob)?.title || '';
+
+  // Compute stats once to avoid inline arrow functions in JSX (build fix)
+  const totalCandidates = filteredCandidates.length;
+  const newCount = filteredCandidates.filter(c => c.status === 'new').length;
+  const reviewedCount = filteredCandidates.filter(c => c.status === 'reviewed').length;
+  const interviewCount = filteredCandidates.filter(c => c.status === 'interview').length;
+  const hiredCount = filteredCandidates.filter(c => c.status === 'hired').length;
+  const rejectedCount = filteredCandidates.filter(c => c.status === 'rejected').length;
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -423,12 +431,12 @@ const CandidateManagement = () => {
       {filteredCandidates.length > 0 && viewMode === 'cards' && (
         <div className="hidden lg:block bg-white rounded-xl shadow-sm border border-gray-200 p-4">
           <div className="grid grid-cols-3 md:grid-cols-6 gap-3 md:gap-4">
-            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-gray-900">{filteredCandidates.length}</div><div className="text-xs md:text-sm text-gray-500">Total</div></div>
-            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-blue-600">{filteredCandidates.filter(c => c.status === 'new').length}</div><div className="text-xs md:text-sm text-gray-500">New</div></div>
-            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-amber-600">{filteredCandidates.filter(c => c.status === 'reviewed').length}</div><div className="text-xs md:text-sm text-gray-500">Reviewed</div></div>
-            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-purple-600">{filteredCandidates.filter(c => c.status === 'interview').length}</div><div className="text-xs md:text-sm text-gray-500">Interview</div></div>
-            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-green-600}>{filteredCandidates.filter(c => c.status === 'hired').length}</div><div className="text-xs md:text-sm text-gray-500">Hired</div></div>
-            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-gray-600}>{filteredCandidates.filter(c => c.status === 'rejected').length}</div><div className="text-xs md:text-sm text-gray-500">Rejected</div></div>
+            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-gray-900">{totalCandidates}</div><div className="text-xs md:text-sm text-gray-500">Total</div></div>
+            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-blue-600">{newCount}</div><div className="text-xs md:text-sm text-gray-500">New</div></div>
+            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-amber-600">{reviewedCount}</div><div className="text-xs md:text-sm text-gray-500">Reviewed</div></div>
+            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-purple-600">{interviewCount}</div><div className="text-xs md:text-sm text-gray-500">Interview</div></div>
+            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-green-600">{hiredCount}</div><div className="text-xs md:text-sm text-gray-500">Hired</div></div>
+            <div className="text-center"><div className="text-xl md:text-2xl font-bold text-gray-600">{rejectedCount}</div><div className="text-xs md:text-sm text-gray-500">Rejected</div></div>
           </div>
         </div>
       )}
