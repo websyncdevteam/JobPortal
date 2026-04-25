@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Loader, Phone, Mail, FileText, Grid, List, Filter, Download, Plus, X, ChevronRight, ChevronLeft, Send } from 'lucide-react';
+import { Users, Search, Loader, Phone, Mail, FileText, Grid, List, Filter, Download, Plus, X, ChevronRight, ChevronLeft, Send, User, Briefcase, Calendar as CalendarIcon, DollarSign } from 'lucide-react';
 import { useRecruiter } from '../../context/RecruiterContext';
 import PipelineView from './candidates/PipelineView';
 import AdvancedFilters from './AdvancedFilters';
@@ -10,7 +10,7 @@ import api from '../../services/api';
 import { toast } from 'sonner';
 
 // Helper Icon Components (unchanged)
-const CalendarIcon = ({ size = 16, className = "" }) => (
+const CalendarIconComp = ({ size = 16, className = "" }) => (
   <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor">
     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
     <line x1="16" y1="2" x2="16" y2="6"/>
@@ -40,18 +40,19 @@ const ChevronDownIcon = ({ className = '' }) => (
   </svg>
 );
 
-const DollarSign = ({ size = 16, className = "" }) => (
+const DollarSignIcon = ({ size = 16, className = "" }) => (
   <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor">
     <line x1="12" y1="1" x2="12" y2="23"/>
     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
   </svg>
 );
 
-// Candidate Card Component (unchanged)
+// Candidate Card Component (with Push, Schedule, Payout, and Profile Modal)
 const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, onSetPayout }) => {
   const [pushing, setPushing] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showPayoutModal, setShowPayoutModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [scheduleData, setScheduleData] = useState({
     scheduledTime: '',
     type: 'online',
@@ -103,6 +104,13 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
 
   const showPayout = candidate.source === 'freelancer' && ['selected', 'hired', 'joined'].includes(candidate.status);
 
+  // Helper to get resume URL
+  const getResumeUrl = () => {
+    if (!candidate.resumeUrl) return '';
+    if (candidate.resumeUrl.startsWith('http')) return candidate.resumeUrl;
+    return `https://www.backendserver.aim9hire.com/api/uploads/${candidate.resumeUrl}`;
+  };
+
   return (
     <>
       <div className={`bg-white rounded-xl shadow-sm p-4 border ${isSelected ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-100'} hover:shadow-md transition-all duration-200`}>
@@ -134,30 +142,32 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
               </span>
             </div>
             <div className="mt-2 flex flex-wrap items-center text-gray-500 text-sm gap-2">
-              <span className="flex items-center"><CalendarIcon size={14} className="mr-1" />{candidate.appliedDate ? new Date(candidate.appliedDate).toLocaleDateString() : 'Recently'}</span>
+              <span className="flex items-center"><CalendarIconComp size={14} className="mr-1" />{candidate.appliedDate ? new Date(candidate.appliedDate).toLocaleDateString() : 'Recently'}</span>
               {candidate.experience && <span className="flex items-center"><BriefcaseIcon size={14} className="mr-1" />{candidate.experience}y exp</span>}
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <a href={`tel:${candidate.phone}`} className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50"><Phone size={14} /></div><span className="ml-1.5 hidden sm:inline">Call</span></a>
               <a href={`mailto:${candidate.email}`} className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50"><Mail size={14} /></div><span className="ml-1.5 hidden sm:inline">Email</span></a>
-              <button className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50"><FileText size={14} /></div><span className="ml-1.5 hidden sm:inline">Resume</span></button>
+              {candidate.resumeUrl && (
+                <a href={getResumeUrl()} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50"><FileText size={14} /></div><span className="ml-1.5 hidden sm:inline">Resume</span></a>
+              )}
               <button onClick={handlePush} disabled={pushing} className="inline-flex items-center text-indigo-600 hover:text-indigo-800 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100">{pushing ? <Loader size={14} className="animate-spin" /> : <Send size={14} />}</div><span className="ml-1.5 hidden sm:inline">Push</span></button>
-              <button onClick={() => setShowScheduleModal(true)} className="inline-flex items-center text-purple-600 hover:text-purple-800 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100"><CalendarIcon size={14} /></div><span className="ml-1.5 hidden sm:inline">Schedule</span></button>
+              <button onClick={() => setShowScheduleModal(true)} className="inline-flex items-center text-purple-600 hover:text-purple-800 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100"><CalendarIconComp size={14} /></div><span className="ml-1.5 hidden sm:inline">Schedule</span></button>
               {showPayout && (
-                <button onClick={() => setShowPayoutModal(true)} className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-green-50 hover:bg-green-100"><DollarSign size={14} /></div><span className="ml-1.5 hidden sm:inline">Payout</span></button>
+                <button onClick={() => setShowPayoutModal(true)} className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-green-50 hover:bg-green-100"><DollarSignIcon size={14} /></div><span className="ml-1.5 hidden sm:inline">Payout</span></button>
               )}
               <div className="flex-1"></div>
               <button className="inline-flex items-center text-gray-500 hover:text-gray-700 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-gray-50 hover:bg-gray-100"><MoreVerticalIcon size={14} /></div></button>
             </div>
             <div className="mt-3 flex flex-col xs:flex-row gap-2">
-              <button className="flex-1 text-sm bg-indigo-50 text-indigo-700 px-3 py-2 rounded-lg hover:bg-indigo-100 flex items-center justify-center"><CalendarIcon size={14} className="mr-2" /> Schedule</button>
-              <button className="flex-1 text-sm bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 truncate">View Profile</button>
+              <button className="flex-1 text-sm bg-indigo-50 text-indigo-700 px-3 py-2 rounded-lg hover:bg-indigo-100 flex items-center justify-center"><CalendarIconComp size={14} className="mr-2" /> Schedule</button>
+              <button onClick={() => setShowProfileModal(true)} className="flex-1 text-sm bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 truncate">View Profile</button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Schedule Interview Modal */}
+      {/* Schedule Interview Modal (unchanged) */}
       {showScheduleModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -173,7 +183,7 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
         </div>
       )}
 
-      {/* Set Payout Modal */}
+      {/* Set Payout Modal (unchanged) */}
       {showPayoutModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -182,6 +192,48 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
               <div><label className="block text-sm font-medium text-gray-700">Amount (USD)</label><input type="number" step="0.01" value={payoutAmount} onChange={(e) => setPayoutAmount(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="e.g., 500" /></div>
               <div><label className="block text-sm font-medium text-gray-700">Notes (Optional)</label><textarea rows="2" value={payoutNotes} onChange={(e) => setPayoutNotes(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Any notes about this payout..." /></div>
               <div className="flex gap-3 pt-2"><button onClick={handlePayoutSubmit} className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">Set Payout</button><button onClick={() => setShowPayoutModal(false)} className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300">Cancel</button></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Modal */}
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Candidate Profile</h3>
+              <button onClick={() => setShowProfileModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                  <User size={24} className="text-indigo-600" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-xl">{candidate.name || 'Not provided'}</h4>
+                  <p className="text-gray-500">{candidate.email || 'No email'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-sm text-gray-500">Phone</label><p className="font-medium">{candidate.phone || 'Not provided'}</p></div>
+                <div><label className="text-sm text-gray-500">Experience</label><p className="font-medium">{candidate.experience ? `${candidate.experience} years` : 'Not specified'}</p></div>
+                <div><label className="text-sm text-gray-500">Applied for</label><p className="font-medium">{candidate.jobTitle || 'Unknown'}</p></div>
+                <div><label className="text-sm text-gray-500">Status</label><p className="font-medium capitalize">{candidate.status || 'Unknown'}</p></div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">Skills</label>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {candidate.skills?.length > 0 ? candidate.skills.map((skill, i) => <span key={i} className="bg-gray-100 px-2 py-0.5 rounded-full text-sm">{skill}</span>) : <span className="text-gray-400 text-sm">No skills listed</span>}
+                </div>
+              </div>
+              {candidate.bio && <div><label className="text-sm text-gray-500">Bio</label><p className="text-sm mt-1">{candidate.bio}</p></div>}
+              {candidate.resumeUrl && (
+                <div><label className="text-sm text-gray-500">Resume</label><a href={getResumeUrl()} target="_blank" rel="noopener noreferrer" className="block mt-1 text-indigo-600 hover:underline">Download Resume</a></div>
+              )}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button onClick={() => setShowProfileModal(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Close</button>
             </div>
           </div>
         </div>
