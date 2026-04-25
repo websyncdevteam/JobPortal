@@ -9,7 +9,7 @@ import ActivityTimelineUI from './ActivityTimelineUI';
 import api from '../../services/api';
 import { toast } from 'sonner';
 
-// Helper Icon Components
+// Helper Icon Components (unchanged)
 const CalendarIcon = ({ size = 16, className = "" }) => (
   <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor">
     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -47,7 +47,7 @@ const DollarSign = ({ size = 16, className = "" }) => (
   </svg>
 );
 
-// Candidate Card Component (with all three actions: Push, Schedule, Payout)
+// Candidate Card Component (unchanged)
 const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, onSetPayout }) => {
   const [pushing, setPushing] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -107,26 +107,12 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
     <>
       <div className={`bg-white rounded-xl shadow-sm p-4 border ${isSelected ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-100'} hover:shadow-md transition-all duration-200`}>
         <div className="flex items-start">
-          {/* Selection Checkbox */}
           <div className="mr-3 mt-1">
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={(e) => {
-                e.stopPropagation();
-                onSelect(candidate._id);
-              }}
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-            />
+            <input type="checkbox" checked={isSelected} onChange={(e) => { e.stopPropagation(); onSelect(candidate._id); }} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" />
           </div>
-
-          {/* Avatar */}
           <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 border-2 border-white shadow-sm flex items-center justify-center flex-shrink-0">
-            <div className="text-lg font-bold text-indigo-700">
-              {candidate.name ? candidate.name.charAt(0).toUpperCase() : '?'}
-            </div>
+            <div className="text-lg font-bold text-indigo-700">{candidate.name ? candidate.name.charAt(0).toUpperCase() : '?'}</div>
           </div>
-
           <div className="ml-3 flex-1 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
@@ -144,80 +130,28 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
                   ? 'bg-green-100 text-green-800'
                   : 'bg-gray-100 text-gray-800'
               }`}>
-                {candidate.status === 'new'
-                  ? 'New'
-                  : candidate.status === 'reviewed'
-                  ? 'Reviewed'
-                  : candidate.status === 'interview'
-                  ? 'Interview'
-                  : candidate.status === 'hired'
-                  ? 'Hired'
-                  : candidate.status || 'Unknown'}
+                {candidate.status === 'new' ? 'New' : candidate.status === 'reviewed' ? 'Reviewed' : candidate.status === 'interview' ? 'Interview' : candidate.status === 'hired' ? 'Hired' : candidate.status || 'Unknown'}
               </span>
             </div>
-
             <div className="mt-2 flex flex-wrap items-center text-gray-500 text-sm gap-2">
-              <span className="flex items-center">
-                <CalendarIcon size={14} className="mr-1" />
-                {candidate.appliedDate ? new Date(candidate.appliedDate).toLocaleDateString() : 'Recently'}
-              </span>
-              {candidate.experience && (
-                <span className="flex items-center">
-                  <BriefcaseIcon size={14} className="mr-1" />
-                  {candidate.experience}y exp
-                </span>
-              )}
+              <span className="flex items-center"><CalendarIcon size={14} className="mr-1" />{candidate.appliedDate ? new Date(candidate.appliedDate).toLocaleDateString() : 'Recently'}</span>
+              {candidate.experience && <span className="flex items-center"><BriefcaseIcon size={14} className="mr-1" />{candidate.experience}y exp</span>}
             </div>
-
             <div className="mt-4 flex flex-wrap gap-2">
-              <a href={`tel:${candidate.phone}`} className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm" title="Call candidate">
-                <div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors"><Phone size={14} /></div>
-                <span className="ml-1.5 hidden sm:inline">Call</span>
-              </a>
-              <a href={`mailto:${candidate.email}`} className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm" title="Email candidate">
-                <div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors"><Mail size={14} /></div>
-                <span className="ml-1.5 hidden sm:inline">Email</span>
-              </a>
-              <button className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm" title="View resume">
-                <div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors"><FileText size={14} /></div>
-                <span className="ml-1.5 hidden sm:inline">Resume</span>
-              </button>
-              
-              {/* Push to Company button */}
-              <button onClick={handlePush} disabled={pushing} className="inline-flex items-center text-indigo-600 hover:text-indigo-800 transition-colors text-sm" title="Push candidate to company">
-                <div className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 transition-colors">
-                  {pushing ? <Loader size={14} className="animate-spin" /> : <Send size={14} />}
-                </div>
-                <span className="ml-1.5 hidden sm:inline">Push</span>
-              </button>
-              
-              {/* Schedule Interview button */}
-              <button onClick={() => setShowScheduleModal(true)} className="inline-flex items-center text-purple-600 hover:text-purple-800 transition-colors text-sm" title="Schedule interview">
-                <div className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100"><CalendarIcon size={14} /></div>
-                <span className="ml-1.5 hidden sm:inline">Schedule</span>
-              </button>
-
-              {/* Set Payout button (only for freelancer-sourced hired candidates) */}
+              <a href={`tel:${candidate.phone}`} className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50"><Phone size={14} /></div><span className="ml-1.5 hidden sm:inline">Call</span></a>
+              <a href={`mailto:${candidate.email}`} className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50"><Mail size={14} /></div><span className="ml-1.5 hidden sm:inline">Email</span></a>
+              <button className="inline-flex items-center text-gray-500 hover:text-indigo-600 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-gray-50 hover:bg-blue-50"><FileText size={14} /></div><span className="ml-1.5 hidden sm:inline">Resume</span></button>
+              <button onClick={handlePush} disabled={pushing} className="inline-flex items-center text-indigo-600 hover:text-indigo-800 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100">{pushing ? <Loader size={14} className="animate-spin" /> : <Send size={14} />}</div><span className="ml-1.5 hidden sm:inline">Push</span></button>
+              <button onClick={() => setShowScheduleModal(true)} className="inline-flex items-center text-purple-600 hover:text-purple-800 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100"><CalendarIcon size={14} /></div><span className="ml-1.5 hidden sm:inline">Schedule</span></button>
               {showPayout && (
-                <button onClick={() => setShowPayoutModal(true)} className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors text-sm" title="Set Payout for Freelancer">
-                  <div className="p-1.5 rounded-lg bg-green-50 hover:bg-green-100"><DollarSign size={14} /></div>
-                  <span className="ml-1.5 hidden sm:inline">Payout</span>
-                </button>
+                <button onClick={() => setShowPayoutModal(true)} className="inline-flex items-center text-green-600 hover:text-green-800 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-green-50 hover:bg-green-100"><DollarSign size={14} /></div><span className="ml-1.5 hidden sm:inline">Payout</span></button>
               )}
-              
               <div className="flex-1"></div>
-              <button className="inline-flex items-center text-gray-500 hover:text-gray-700 transition-colors text-sm">
-                <div className="p-1.5 rounded-lg bg-gray-50 hover:bg-gray-100"><MoreVerticalIcon size={14} /></div>
-              </button>
+              <button className="inline-flex items-center text-gray-500 hover:text-gray-700 transition-colors text-sm"><div className="p-1.5 rounded-lg bg-gray-50 hover:bg-gray-100"><MoreVerticalIcon size={14} /></div></button>
             </div>
-
             <div className="mt-3 flex flex-col xs:flex-row gap-2">
-              <button className="flex-1 text-sm bg-indigo-50 text-indigo-700 px-3 py-2 rounded-lg hover:bg-indigo-100 flex items-center justify-center">
-                <CalendarIcon size={14} className="mr-2" /> Schedule
-              </button>
-              <button className="flex-1 text-sm bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 truncate">
-                View Profile
-              </button>
+              <button className="flex-1 text-sm bg-indigo-50 text-indigo-700 px-3 py-2 rounded-lg hover:bg-indigo-100 flex items-center justify-center"><CalendarIcon size={14} className="mr-2" /> Schedule</button>
+              <button className="flex-1 text-sm bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 truncate">View Profile</button>
             </div>
           </div>
         </div>
@@ -227,10 +161,7 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
       {showScheduleModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Schedule Interview</h3>
-              <button onClick={() => setShowScheduleModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
-            </div>
+            <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-semibold text-gray-900">Schedule Interview</h3><button onClick={() => setShowScheduleModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button></div>
             <div className="space-y-4">
               <div><label className="block text-sm font-medium text-gray-700">Date & Time</label><input type="datetime-local" value={scheduleData.scheduledTime} onChange={(e) => setScheduleData({ ...scheduleData, scheduledTime: e.target.value })} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" required /></div>
               <div><label className="block text-sm font-medium text-gray-700">Interview Type</label><select value={scheduleData.type} onChange={(e) => setScheduleData({ ...scheduleData, type: e.target.value })} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"><option value="online">Online (Video Call)</option><option value="offline">Offline (In-Person)</option></select></div>
@@ -246,10 +177,7 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
       {showPayoutModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Set Payout for Freelancer</h3>
-              <button onClick={() => setShowPayoutModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
-            </div>
+            <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-semibold text-gray-900">Set Payout for Freelancer</h3><button onClick={() => setShowPayoutModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button></div>
             <div className="space-y-4">
               <div><label className="block text-sm font-medium text-gray-700">Amount (USD)</label><input type="number" step="0.01" value={payoutAmount} onChange={(e) => setPayoutAmount(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="e.g., 500" /></div>
               <div><label className="block text-sm font-medium text-gray-700">Notes (Optional)</label><textarea rows="2" value={payoutNotes} onChange={(e) => setPayoutNotes(e.target.value)} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Any notes about this payout..." /></div>
@@ -262,7 +190,7 @@ const CandidateCard = ({ candidate, isSelected, onSelect, onPush, onSchedule, on
   );
 };
 
-// Main CandidateManagement Component (unchanged except for additional handlers)
+// Main CandidateManagement Component (fixed mobile chips)
 const CandidateManagement = () => {
   const { jobs, candidates, loading, fetchCandidates } = useRecruiter();
   const [selectedJob, setSelectedJob] = useState('');
@@ -284,7 +212,6 @@ const CandidateManagement = () => {
     if (selectedJob) fetchCandidates(selectedJob);
   }, [selectedJob]);
 
-  // Push single candidate
   const pushCandidateToCompany = async (applicationId) => {
     try {
       const res = await api.post("/recruiter/candidates/push", { applicationIds: [applicationId], notes: "Pushed by recruiter", interviewDate: null });
@@ -297,7 +224,6 @@ const CandidateManagement = () => {
     }
   };
 
-  // Bulk push
   const pushSelectedToCompany = async () => {
     if (selectedCandidates.length === 0) { toast.error("No candidates selected"); return; }
     setPushLoading(true);
@@ -313,7 +239,6 @@ const CandidateManagement = () => {
     }
   };
 
-  // Schedule interview
   const scheduleInterviewForCandidate = async (applicationId, scheduleData) => {
     try {
       await api.post("/recruiter/interviews/schedule", { applicationId, scheduledTime: scheduleData.scheduledTime, type: scheduleData.type, meetingLink: scheduleData.meetingLink, notes: scheduleData.notes });
@@ -326,7 +251,6 @@ const CandidateManagement = () => {
     }
   };
 
-  // Set payout for freelancer
   const handleSetPayout = async (applicationId, amount, notes) => {
     try {
       const res = await api.post("/recruiter/payouts/set", { applicationId, amount, notes });
@@ -339,7 +263,6 @@ const CandidateManagement = () => {
     }
   };
 
-  // Filtering logic (unchanged)
   const filteredCandidates = candidates && candidates.length > 0
     ? candidates.filter((candidate) => {
         if (statusFilter !== 'all' && candidate.status !== statusFilter) return false;
@@ -375,7 +298,7 @@ const CandidateManagement = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* Header (unchanged) */}
+      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 lg:gap-4">
         <div className="min-w-0">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">Candidate Management</h1>
@@ -404,7 +327,7 @@ const CandidateManagement = () => {
       )}
 
       <div className="flex flex-col lg:flex-row gap-4 md:gap-6">
-        {/* Filters Sidebar - Desktop (unchanged) */}
+        {/* Filters Sidebar - Desktop */}
         <div className="hidden lg:block w-full lg:w-80 flex-shrink-0">
           <div className="sticky top-6 space-y-6">
             <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
@@ -415,30 +338,18 @@ const CandidateManagement = () => {
             </div>
             <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
               <div className="flex items-center justify-between mb-3"><h3 className="font-medium text-gray-900">Status Filter</h3><button onClick={() => setStatusFilter('all')} className="text-sm text-indigo-600">Clear</button></div>
-              <div className="space-y-2">
-                {['all', 'new', 'reviewed', 'interview', 'hired', 'rejected'].map(status => (
-                  <button key={status} onClick={() => setStatusFilter(status)} className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${statusFilter === status ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-gray-700 hover:bg-gray-50'}`}>
-                    <div className="flex items-center justify-between">
-                      <span>{status === 'all' ? 'All Statuses' : status === 'new' ? 'New Applicants' : status === 'reviewed' ? 'Reviewed' : status === 'interview' ? 'Interview Stage' : status === 'hired' ? 'Hired' : 'Rejected'}</span>
-                      <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">{status === 'all' ? filteredCandidates.length : filteredCandidates.filter(c => c.status === status).length}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <div className="space-y-2">{['all', 'new', 'reviewed', 'interview', 'hired', 'rejected'].map(status => (<button key={status} onClick={() => setStatusFilter(status)} className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${statusFilter === status ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-gray-700 hover:bg-gray-50'}`}><div className="flex items-center justify-between"><span>{status === 'all' ? 'All Statuses' : status === 'new' ? 'New Applicants' : status === 'reviewed' ? 'Reviewed' : status === 'interview' ? 'Interview Stage' : status === 'hired' ? 'Hired' : 'Rejected'}</span><span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">{status === 'all' ? filteredCandidates.length : filteredCandidates.filter(c => c.status === status).length}</span></div></button>))}</div>
             </div>
             <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
               <h3 className="font-medium text-gray-900 mb-3">Search Candidates</h3>
               <div className="relative"><input type="text" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Search by name, skills..." className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm" /><Search size={16} className="absolute left-3 top-2.5 text-gray-400" /></div>
             </div>
-            <button onClick={() => setShowAdvancedFilters(!showAdvancedFilters)} className="w-full flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-gray-200 hover:border-indigo-300">
-              <div className="flex items-center"><Filter size={18} className="text-gray-400 mr-3" /><div className="text-left"><h3 className="font-medium text-gray-900">Advanced Filters</h3><p className="text-sm text-gray-500">Experience, skills, location</p></div></div>
-              <div className={`ml-2 w-6 h-6 rounded-full flex items-center justify-center ${showAdvancedFilters ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-400'}`}><ChevronDownIcon className={showAdvancedFilters ? 'rotate-180' : ''} /></div>
-            </button>
+            <button onClick={() => setShowAdvancedFilters(!showAdvancedFilters)} className="w-full flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-gray-200 hover:border-indigo-300"><div className="flex items-center"><Filter size={18} className="text-gray-400 mr-3" /><div className="text-left"><h3 className="font-medium text-gray-900">Advanced Filters</h3><p className="text-sm text-gray-500">Experience, skills, location</p></div></div><div className={`ml-2 w-6 h-6 rounded-full flex items-center justify-center ${showAdvancedFilters ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-400'}`}><ChevronDownIcon className={showAdvancedFilters ? 'rotate-180' : ''} /></div></button>
             {showAdvancedFilters && <AdvancedFilters onFilterChange={setAdvancedFilters} initialFilters={advancedFilters} availableSkills={Array.from(new Set(candidates?.flatMap(c => c.skills || []).filter(Boolean)))} availableJobTypes={Array.from(new Set(jobs?.map(j => j.jobType).filter(Boolean)))} />}
           </div>
         </div>
 
-        {/* Mobile Filters Overlay (unchanged) */}
+        {/* Mobile Filters Overlay */}
         {showMobileFilters && (
           <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50">
             <div className="absolute right-0 top-0 h-full w-4/5 max-w-sm bg-white shadow-xl overflow-y-auto">
@@ -461,9 +372,42 @@ const CandidateManagement = () => {
             </div>
           )}
 
+          {/* Mobile Top Bar - FIXED */}
           <div className="lg:hidden mb-4 space-y-3">
-            <div className="flex items-center gap-2"><div className="flex-1 relative"><input type="text" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Search candidates..." className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg" /><Search size={16} className="absolute left-3 top-2.5 text-gray-400" /></div><button onClick={() => setShowMobileFilters(true)} className="p-2.5 bg-gray-100 rounded-lg"><Filter size={18} /></button></div>
-            <div className="flex flex-wrap gap-2 overflow-x-auto pb-1">{['all', 'new', 'reviewed', 'interview', 'hired', 'rejected'].map(status => (<button key={status} onClick={() => setStatusFilter(status)} className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${statusFilter === status ? (status === 'new' ? 'bg-blue-100 text-blue-800' : status === 'reviewed' ? 'bg-amber-100 text-amber-800' : status === 'interview' ? 'bg-purple-100 text-purple-800' : status === 'hired' ? 'bg-green-100 text-green-800' : status === 'rejected' ? 'bg-gray-100 text-gray-800' : 'bg-indigo-100 text-indigo-800') : 'bg-gray-100 text-gray-700'}`)}>{status === 'all' ? 'All' : status === 'new' ? 'New' : status === 'reviewed' ? 'Reviewed' : status === 'interview' ? 'Interview' : status === 'hired' ? 'Hired' : 'Rejected'}</button>))}</div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 relative">
+                <input type="text" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Search candidates..." className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg" />
+                <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+              </div>
+              <button onClick={() => setShowMobileFilters(true)} className="p-2.5 bg-gray-100 rounded-lg"><Filter size={18} /></button>
+            </div>
+            <div className="flex flex-wrap gap-2 overflow-x-auto pb-1">
+              {['all', 'new', 'reviewed', 'interview', 'hired', 'rejected'].map(status => {
+                let chipClass = '';
+                if (statusFilter === status) {
+                  if (status === 'new') chipClass = 'bg-blue-100 text-blue-800';
+                  else if (status === 'reviewed') chipClass = 'bg-amber-100 text-amber-800';
+                  else if (status === 'interview') chipClass = 'bg-purple-100 text-purple-800';
+                  else if (status === 'hired') chipClass = 'bg-green-100 text-green-800';
+                  else if (status === 'rejected') chipClass = 'bg-gray-100 text-gray-800';
+                  else chipClass = 'bg-indigo-100 text-indigo-800';
+                } else {
+                  chipClass = 'bg-gray-100 text-gray-700';
+                }
+                let label = '';
+                if (status === 'all') label = 'All';
+                else if (status === 'new') label = 'New';
+                else if (status === 'reviewed') label = 'Reviewed';
+                else if (status === 'interview') label = 'Interview';
+                else if (status === 'hired') label = 'Hired';
+                else if (status === 'rejected') label = 'Rejected';
+                return (
+                  <button key={status} onClick={() => setStatusFilter(status)} className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${chipClass}`}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {viewMode === 'pipeline' ? (
