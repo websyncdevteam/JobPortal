@@ -34,7 +34,7 @@ const SECURITY_CONFIG = {
 
 const ROLE_REDIRECTS = {
   admin: '/admin/dashboard',
-  recruiter: '/recruiter/dashboard',
+  recruiter: '/recruiter',
   freelancer: '/freelancer/dashboard',
   company: '/company/dashboard',
   user: '/profile',
