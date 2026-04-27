@@ -1,4 +1,3 @@
-// src/components/recruiter/Settings.jsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/authContext';
 import api from '../../services/api';
