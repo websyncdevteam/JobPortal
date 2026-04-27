@@ -1,4 +1,4 @@
-// src/App.jsx - UPDATED WITH TEAM MANAGEMENT ROUTES + RECRUITER JOB CREATE + STATS REDIRECT + EDIT JOB ROUTE
+// src/App.jsx - UPDATED WITH TEAM MANAGEMENT ROUTES + RECRUITER JOB CREATE + STATS REDIRECT + EDIT JOB ROUTE + FIXED SETTINGS
 import React, { useEffect, useState } from "react";
 import {
   createBrowserRouter,
@@ -64,7 +64,6 @@ import VerifyEmail from './pages/VerifyEmail';
 import CheckEmail from "./pages/CheckEmail";
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword.jsx';
-import RecruiterSettings from "./components/recruiter/Settings";
 
 // Freelancer pages
 import FreelancerOnboarding from "./pages/freelancer/Onboarding";
@@ -292,15 +291,14 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardOverview /> },
       { path: "jobs", element: <JobManagement /> },
-      { path: "jobs/create", element: <PostJob /> },                // create job
-      { path: "jobs/edit/:jobId", element: <EditJob /> },           // ✅ ADDED: edit job
+      { path: "jobs/create", element: <PostJob /> },
+      { path: "jobs/edit/:jobId", element: <EditJob /> },
       { path: "candidates", element: <CandidateManagement /> },
       { path: "interviews", element: <InterviewScheduling /> },
       { path: "analytics", element: <AnalyticsRecruiter /> },
-      { path: "settings", element: <Settings /> },
       { path: "my-team", element: <SubAdminTeamManagement /> },
       { path: "stats", element: <Navigate to="/recruiter/analytics" replace /> },
-      { path: "settings", element: <RecruiterSettingsNew /> }
+      { path: "settings", element: <RecruiterSettingsNew /> }, // ✅ only one settings route
     ],
   },
 
