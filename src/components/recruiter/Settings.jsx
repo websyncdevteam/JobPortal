@@ -8,7 +8,7 @@ import {
   Eye, EyeOff, Building, Users, Briefcase, Loader 
 } from 'lucide-react';
 
-const RecruiterSettings = () => {
+const Settings = () => {
   const { user, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(true);
@@ -179,7 +179,7 @@ const RecruiterSettings = () => {
           <Key className="h-5 w-5 text-yellow-600 mr-3" />
           <div>
             <h4 className="text-sm font-medium text-yellow-800">Password Security</h4>
-            <p className="text-sm text-yellow-700">Update your password regularly to keep your account secure.</p>
+            <p className="text-sm text-yellow-700">Update your password regularly.</p>
           </div>
         </div>
       </div>
@@ -254,7 +254,7 @@ const RecruiterSettings = () => {
           disabled={updating}
           className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-50"
         >
-          {updating ? <Loader size={18} className="animate-spin" /> : <Save size={18} />}
+          {updating ? <Loader size={18} className="animate-spin" /> : <Save size{18} />}
           Change Password
         </button>
       </div>
@@ -366,4 +366,4 @@ const RecruiterSettings = () => {
   );
 };
 
-export default RecruiterSettings;
+export default Settings;
