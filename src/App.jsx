@@ -49,6 +49,7 @@ import JobManagement from "./components/recruiter/JobManagement";
 import CandidateManagement from "./components/recruiter/CandidateManagement";
 import InterviewScheduling from "./components/recruiter/InterviewScheduling";
 import AnalyticsRecruiter from "./components/recruiter/Analytics";
+import RecruiterSettingsNew from "./components/recruiter/RecruiterSettingsNew";
 
 // Company pages
 import Dashboard from "./pages/Dashboard";
@@ -299,6 +300,7 @@ const router = createBrowserRouter([
       { path: "settings", element: <Settings /> },
       { path: "my-team", element: <SubAdminTeamManagement /> },
       { path: "stats", element: <Navigate to="/recruiter/analytics" replace /> },
+      { path: "settings", element: <RecruiterSettingsNew /> }
     ],
   },
 
