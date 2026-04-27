@@ -1,10 +1,10 @@
-// src/components/recruiter/RecruiterSettings.jsx
+// src/components/recruiter/Settings.jsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/authContext';
 import api from '../../services/api';
 import { toast } from 'sonner';
 import { 
-  User, Mail, Phone, Lock, Bell, Globe, Save, Shield, Key, 
+  User, Mail, Phone, Lock, Save, Shield, Key, 
   Eye, EyeOff, Building, Users, Briefcase, Loader 
 } from 'lucide-react';
 
@@ -16,7 +16,6 @@ const RecruiterSettings = () => {
   const [teamData, setTeamData] = useState(null);
   const [companies, setCompanies] = useState([]);
   
-  // Form states
   const [profileForm, setProfileForm] = useState({
     fullname: '',
     phoneNumber: '',
@@ -32,7 +31,6 @@ const RecruiterSettings = () => {
     confirm: false,
   });
 
-  // Fetch team and companies data
   useEffect(() => {
     const fetchTeamAndCompanies = async () => {
       try {
@@ -122,46 +120,37 @@ const RecruiterSettings = () => {
     <form onSubmit={handleProfileSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Full Name
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
           <input
             type="text"
             name="fullname"
             value={profileForm.fullname}
             onChange={handleProfileChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Mail size={16} className="inline mr-1" /> Email Address
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
           <input
             type="email"
             value={user?.email || ''}
             disabled
             className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
           />
-          <p className="text-xs text-gray-500 mt-1">Email cannot be changed. Contact support.</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Phone size={16} className="inline mr-1" /> Phone Number
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
           <input
             type="tel"
             name="phoneNumber"
             value={profileForm.phoneNumber}
             onChange={handleProfileChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Role
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
           <input
             type="text"
             value={user?.role === 'recruiter' ? 'Recruiter' : user?.role || 'User'}
@@ -174,7 +163,7 @@ const RecruiterSettings = () => {
         <button
           type="submit"
           disabled={updating}
-          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-50"
         >
           {updating ? <Loader size={18} className="animate-spin" /> : <Save size={18} />}
           Save Profile
@@ -185,7 +174,7 @@ const RecruiterSettings = () => {
 
   const renderAccountTab = () => (
     <form onSubmit={handlePasswordSubmit} className="space-y-6">
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
         <div className="flex">
           <Key className="h-5 w-5 text-yellow-600 mr-3" />
           <div>
@@ -204,7 +193,7 @@ const RecruiterSettings = () => {
               name="currentPassword"
               value={passwordForm.currentPassword}
               onChange={handlePasswordChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               required
             />
             <button
@@ -224,7 +213,7 @@ const RecruiterSettings = () => {
               name="newPassword"
               value={passwordForm.newPassword}
               onChange={handlePasswordChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               required
             />
             <button
@@ -245,7 +234,7 @@ const RecruiterSettings = () => {
               name="confirmPassword"
               value={passwordForm.confirmPassword}
               onChange={handlePasswordChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               required
             />
             <button
@@ -263,7 +252,7 @@ const RecruiterSettings = () => {
         <button
           type="submit"
           disabled={updating}
-          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-50"
         >
           {updating ? <Loader size={18} className="animate-spin" /> : <Save size={18} />}
           Change Password
@@ -273,10 +262,7 @@ const RecruiterSettings = () => {
   );
 
   const renderTeamTab = () => {
-    if (loading) {
-      return <div className="flex justify-center py-8"><Loader className="animate-spin text-indigo-600" size={32} /></div>;
-    }
-
+    if (loading) return <div className="flex justify-center py-8"><Loader className="animate-spin text-indigo-600" size={32} /></div>;
     return (
       <div className="space-y-6">
         {teamData ? (
@@ -285,9 +271,7 @@ const RecruiterSettings = () => {
               <Users size={20} className="text-indigo-600" />
               {teamData.name}
             </h3>
-            {teamData.description && (
-              <p className="text-gray-600 mb-4">{teamData.description}</p>
-            )}
+            {teamData.description && <p className="text-gray-600 mb-4">{teamData.description}</p>}
             <div className="border-t border-indigo-100 pt-4 mt-2">
               <p className="text-sm text-gray-500 mb-2">Assigned Companies</p>
               {companies.length > 0 ? (
@@ -311,8 +295,6 @@ const RecruiterSettings = () => {
             <p className="text-sm text-gray-500 mt-1">Contact your admin to be added to a team.</p>
           </div>
         )}
-
-        {/* Work summary card */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h3 className="text-md font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Briefcase size={18} className="text-indigo-600" />
@@ -337,24 +319,13 @@ const RecruiterSettings = () => {
     );
   };
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'profile': return renderProfileTab();
-      case 'account': return renderAccountTab();
-      case 'team': return renderTeamTab();
-      default: return renderProfileTab();
-    }
-  };
-
   return (
     <div className="max-w-7xl mx-auto p-4">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
         <p className="text-gray-600 mt-2">Manage your account, team, and security preferences</p>
       </div>
-
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Sidebar Tabs */}
         <div className="lg:w-64 flex-shrink-0">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <nav className="space-y-1">
@@ -378,11 +349,16 @@ const RecruiterSettings = () => {
             </nav>
           </div>
         </div>
-
-        {/* Main Content */}
         <div className="flex-1">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            {renderTabContent()}
+            {(() => {
+              switch (activeTab) {
+                case 'profile': return renderProfileTab();
+                case 'account': return renderAccountTab();
+                case 'team': return renderTeamTab();
+                default: return renderProfileTab();
+              }
+            })()}
           </div>
         </div>
       </div>
