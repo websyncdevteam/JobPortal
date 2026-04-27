@@ -254,7 +254,7 @@ const Settings = () => {
           disabled={updating}
           className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-50"
         >
-          {updating ? <Loader size={18} className="animate-spin" /> : <Save size{18} />}
+          {updating ? <Loader size={18} className="animate-spin" /> : <Save size={18} />}
           Change Password
         </button>
       </div>
